@@ -1,7 +1,8 @@
 // @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import { interpretToddler } from '@/lib/toddler.functions';
-// Server voice not yet set up here; the device's built-in voice is used.
-const SERVER_TTS_ENABLED = false;
+// Natural narrator voice via ElevenLabs (/api/tts); falls back to device voice.
+const SERVER_TTS_ENABLED = true;
+const ttsCache = new Map<string, ArrayBuffer>();
 // Speech synthesis, speech recognition, and Gemini Live/TTS client for toddlers
 
 import { CHARACTERS, findCharacter } from '../data/characters';
@@ -489,32 +490,34 @@ export async function speakText(
   // Try Google Gemini server TTS first for lifelike warmth and emotional prosody
   if (SERVER_TTS_ENABLED && !options?.skipServerTTS) {
     try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: naturalText, voice: curatedVoice.geminiVoice }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.audio) {
-          const buffer = pcmToAudioBuffer(data.audio, 24000);
-          const ctx = getPlaybackAudioContext();
-          const source = ctx.createBufferSource();
-          source.buffer = buffer;
-          source.connect(ctx.destination);
-          currentSourceNode = source;
-          source.onended = () => {
-            if (currentSourceNode === source) {
-              currentSourceNode = null;
-            }
-            if (onEnd) onEnd();
-          };
-          source.start();
-          return;
-        }
+      const cacheKey = `${targetVoiceId}|${naturalText}`;
+      let bytes = ttsCache.get(cacheKey);
+      if (!bytes) {
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: naturalText, voice: targetVoiceId }),
+        });
+        if (!response.ok) throw new Error(`TTS ${response.status}`);
+        bytes = await response.arrayBuffer();
+        ttsCache.set(cacheKey, bytes);
       }
-    } catch {
-      // Fall back to high quality local speech synthesis
+      const ctx = getPlaybackAudioContext();
+      const buffer = await ctx.decodeAudioData(bytes.slice(0));
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if (currentSourceNode) { try { currentSourceNode.stop(); } catch { /* ignore */ } }
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      currentSourceNode = source;
+      source.onended = () => {
+        if (currentSourceNode === source) currentSourceNode = null;
+        if (onEnd) onEnd();
+      };
+      source.start();
+      return;
+    } catch (e) {
+      console.warn('Natural voice unavailable, using device voice', e);
     }
   }
 
