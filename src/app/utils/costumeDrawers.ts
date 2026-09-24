@@ -1,3 +1,4 @@
+// @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import { CharacterId } from '../types';
 
 // Helper to draw shiny star

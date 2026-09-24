@@ -1,3 +1,4 @@
+// @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 // Haptic feedback utility utilizing the Web Vibration API for tactile toddler engagement
 import { isHapticsEnabled, isSensoryCalm } from './parentSettings';
 

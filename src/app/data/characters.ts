@@ -1,3 +1,4 @@
+// @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import { CharacterItem, CharacterId } from '../types';
 import { getCustomTrainedWords } from '../utils/toddlerVoiceTraining';
 

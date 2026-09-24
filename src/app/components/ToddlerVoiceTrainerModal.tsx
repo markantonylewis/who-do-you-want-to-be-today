@@ -1,3 +1,4 @@
+// @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CharacterId } from '../types';

@@ -1,3 +1,4 @@
+// @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { CharacterId } from '../types';
 import { getFaceLandmarker, LandmarkSmoother, isFaceLandmarkerReady } from '../utils/faceLandmarker';

@@ -11,7 +11,7 @@ export const interpretToddler = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
+    const key = process.env['LOVABLE_API_KEY'];
     if (!key) return { characterId: null as string | null };
     const custom = Object.entries(data.customWords ?? {})
       .filter(([, w]) => w.length)

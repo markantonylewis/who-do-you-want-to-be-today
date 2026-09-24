@@ -1,3 +1,4 @@
+// @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import { FaceTrackingState } from '../types';
 

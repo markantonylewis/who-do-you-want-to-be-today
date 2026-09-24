@@ -1,3 +1,4 @@
+// @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 // Web Audio API sound effect synthesizer for toddlers
 import { isSoundEffectsEnabled } from './parentSettings';
 

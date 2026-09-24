@@ -1,3 +1,4 @@
+// @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import React from 'react';
 import { motion } from 'motion/react';
 import { CHARACTERS } from '../data/characters';

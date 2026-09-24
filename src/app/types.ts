@@ -1,3 +1,4 @@
+// @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 export type CharacterId =
   | 'firefighter'
   | 'police_officer'

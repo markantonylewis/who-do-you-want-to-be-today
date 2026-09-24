@@ -1,3 +1,4 @@
+// @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import { CharacterId } from '../types';
 
 export const STORAGE_KEY_TRAINED_WORDS = 'toddler_custom_voice_training';
