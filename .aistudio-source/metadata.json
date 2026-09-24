@@ -1,0 +1,11 @@
+{
+  "name": "Who Am I Today?",
+  "description": "A voice-first costume dress-up and vocabulary adventure for toddlers with real-time AR face filters.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
