@@ -69,15 +69,27 @@ export class LandmarkSmoother {
     pitchRad: 0,
   };
 
-  private smoothingFactor = 0.32; // Responsive yet smooth for toddler wiggles
+  private initialized = false;
+
+  private smoothValue(current: number, target: number, deltaTime: number, responseTime: number, deadZone: number) {
+    const difference = target - current;
+    if (Math.abs(difference) <= deadZone) return current;
+
+    const alpha = 1 - Math.exp(-Math.max(deltaTime, 1 / 120) / responseTime);
+    return current + difference * alpha;
+  }
 
   public update(target: Partial<FaceTrackingState> | null, deltaTime: number): FaceTrackingState {
     if (!target) {
-      // Landmark not detected on this frame: gently float back to default center-top
+      // Keep the last stable pose through short detection gaps. Moving toward a
+      // default position here makes the accessory visibly jump between frames.
       this.state.isTracking = false;
-      this.state.centerX += (0.5 - this.state.centerX) * 0.05;
-      this.state.centerY += (0.35 - this.state.centerY) * 0.05;
-      this.state.angleRad += (0 - this.state.angleRad) * 0.05;
+      return { ...this.state };
+    }
+
+    if (!this.initialized) {
+      this.state = { ...this.state, ...target, isTracking: true, opacity: 1 };
+      this.initialized = true;
       return { ...this.state };
     }
 
@@ -85,28 +97,34 @@ export class LandmarkSmoother {
     this.state.isTracking = true;
     this.state.opacity = 1;
 
-    // Lerp coordinates
+    // A small dead zone removes landmark shimmer while time-based smoothing
+    // keeps the costume responsive at different camera/display frame rates.
+    const positionDeadZone = Math.max(1.5, this.state.width * 0.008);
+    const sizeDeadZone = Math.max(1.5, this.state.width * 0.006);
     if (target.centerX !== undefined) {
-      this.state.centerX += (target.centerX - this.state.centerX) * this.smoothingFactor;
+      this.state.centerX = this.smoothValue(this.state.centerX, target.centerX, deltaTime, 0.09, positionDeadZone);
     }
     if (target.centerY !== undefined) {
-      this.state.centerY += (target.centerY - this.state.centerY) * this.smoothingFactor;
+      this.state.centerY = this.smoothValue(this.state.centerY, target.centerY, deltaTime, 0.09, positionDeadZone);
     }
     if (target.width !== undefined) {
-      this.state.width += (target.width - this.state.width) * this.smoothingFactor;
+      this.state.width = this.smoothValue(this.state.width, target.width, deltaTime, 0.16, sizeDeadZone);
     }
     if (target.height !== undefined) {
-      this.state.height += (target.height - this.state.height) * this.smoothingFactor;
+      this.state.height = this.smoothValue(this.state.height, target.height, deltaTime, 0.16, sizeDeadZone);
     }
     if (target.angleRad !== undefined) {
       // Handle angle wrap-around
       let diff = target.angleRad - this.state.angleRad;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      this.state.angleRad += diff * this.smoothingFactor;
+      if (Math.abs(diff) > 0.012) {
+        const alpha = 1 - Math.exp(-Math.max(deltaTime, 1 / 120) / 0.12);
+        this.state.angleRad += diff * alpha;
+      }
     }
     if (target.pitchRad !== undefined) {
-      this.state.pitchRad += (target.pitchRad - this.state.pitchRad) * this.smoothingFactor;
+      this.state.pitchRad = this.smoothValue(this.state.pitchRad, target.pitchRad, deltaTime, 0.16, 0.01);
     }
 
     return { ...this.state };

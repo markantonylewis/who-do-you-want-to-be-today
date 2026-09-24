@@ -59,6 +59,15 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
   const isDetectingRef = useRef<boolean>(false);
   const lastVideoTimeRef = useRef<number>(-1);
   const lastTimestampRef = useRef<number>(0);
+  const lastTrackedLandmarksRef = useRef<{
+    centerX: number;
+    centerY: number;
+    width: number;
+    height: number;
+    angleRad: number;
+    pitchRad: number;
+  } | null>(null);
+  const lastFaceSeenAtRef = useRef<number>(0);
 
   const smootherRef = useRef<LandmarkSmoother>(new LandmarkSmoother());
   const sparklesRef = useRef<SparkleParticle[]>([]);
@@ -335,6 +344,9 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
                 pitchRad: (chin.y - forehead.y) * 0.5,
               };
 
+              lastTrackedLandmarksRef.current = targetLandmarks;
+              lastFaceSeenAtRef.current = now;
+
               setIsFaceDetected(true);
             }
           } else {
@@ -348,8 +360,21 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
       }
     }
 
+    // requestAnimationFrame commonly runs faster than the camera. Reuse the
+    // latest measured pose instead of substituting the avatar pose between
+    // camera frames, which caused the accessory to shake back and forth.
+    if (
+      !targetLandmarks &&
+      !useCartoonAvatar &&
+      isCameraActive &&
+      lastTrackedLandmarksRef.current &&
+      now - lastFaceSeenAtRef.current < 750
+    ) {
+      targetLandmarks = lastTrackedLandmarksRef.current;
+    }
+
     // Fallback to toddler cartoon avatar anchor coordinates
-    if (!targetLandmarks) {
+    if (!targetLandmarks && (useCartoonAvatar || !isCameraActive)) {
       const headDiameter = Math.min(Math.min(w * 0.35, 230), Math.max(160, h * 0.30));
       const avatarCenterY = h * 0.44;
       const avatarForeheadY = avatarCenterY - headDiameter * 0.36;
