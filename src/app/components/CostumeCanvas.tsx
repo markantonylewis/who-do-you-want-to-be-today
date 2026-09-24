@@ -44,6 +44,7 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
 
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
   const [isCameraStarting, setIsCameraStarting] = useState<boolean>(false);
+  const [hasCameraAttempted, setHasCameraAttempted] = useState<boolean>(false);
   const [cameraPermissionStatus, setCameraPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [cameraErrorMessage, setCameraErrorMessage] = useState<string | null>(null);
   const [isInIframe, setIsInIframe] = useState<boolean>(false);
@@ -161,6 +162,7 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
   const startCamera = useCallback(async () => {
     if (isCameraStartingRef.current) return;
     isCameraStartingRef.current = true;
+    setHasCameraAttempted(true);
     setIsCameraStarting(true);
     setCameraErrorMessage(null);
     try {
@@ -244,10 +246,20 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
     }
   }, [onCameraReady]);
 
-  // Attempt initial camera on mount
+  // Reconnect automatically only when the browser has already granted access.
+  // New permission prompts must follow a user tap, especially in embedded previews.
   useEffect(() => {
-    startCamera();
+    let cancelled = false;
+    navigator.permissions?.query({ name: 'camera' as PermissionName })
+      .then((status) => {
+        if (!cancelled && status.state === 'granted') startCamera();
+      })
+      .catch(() => {
+        // Some browsers do not expose camera permission state. The visible
+        // camera button below remains the reliable user-gesture fallback.
+      });
     return () => {
+      cancelled = true;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
@@ -622,7 +634,7 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
               onClick={() => setUseCartoonAvatar(!useCartoonAvatar)}
               className="cursor-pointer bg-white/95 hover:bg-white text-amber-950 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 rounded-full shadow-md border-2 border-amber-300 flex items-center gap-1 active:scale-95 transition-transform"
             >
-              <span>{isCameraStarting ? 'Starting…' : '📸 Camera'}</span>
+              <span>{useCartoonAvatar ? '📸 Camera' : '🎭 Cartoon'}</span>
             </button>
           )}
 
@@ -651,6 +663,23 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
           </button>
         </div>
       </div>
+
+      {!isCameraActive && !hasCameraAttempted && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center px-4 pointer-events-none">
+          <div className="pointer-events-auto bg-white/95 border-2 border-amber-300 shadow-xl rounded-2xl p-5 text-center max-w-xs">
+            <div className="text-4xl mb-2" aria-hidden="true">📸</div>
+            <p className="font-black text-amber-950 mb-3">See yourself in the magic mirror</p>
+            <button
+              id="start-camera-prompt"
+              onClick={startCamera}
+              disabled={isCameraStarting}
+              className="cursor-pointer bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-black px-5 py-2.5 rounded-full shadow-md active:scale-95 transition-transform"
+            >
+              {isCameraStarting ? 'Starting camera…' : 'Turn on camera'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 6. Helpful Camera Diagnostics Banner (If camera permission is blocked or denied) */}
       {(cameraPermissionStatus === 'denied' || cameraErrorMessage) && (
