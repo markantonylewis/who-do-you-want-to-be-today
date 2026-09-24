@@ -1,24 +1,33 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, ClientOnly } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+const App = lazy(() => import("@/app/App"));
+
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Who Am I Today? — Toddler Dress-Up Adventure" },
+      { name: "description", content: "A voice-first costume dress-up and vocabulary adventure for toddlers with real-time AR face filters." },
+      { property: "og:title", content: "Who Am I Today? — Toddler Dress-Up Adventure" },
+      { property: "og:description", content: "Voice-first costume dress-up and vocabulary fun for toddlers, with AR face filters." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "viewport", content: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
+function Loading() {
+  return <div className="flex h-screen items-center justify-center text-2xl font-bold">Getting dressed up…</div>;
+}
+
 function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <ClientOnly fallback={<Loading />}>
+      <Suspense fallback={<Loading />}>
+        <App />
+      </Suspense>
+    </ClientOnly>
   );
 }

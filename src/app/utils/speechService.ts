@@ -1,3 +1,6 @@
+import { interpretToddler } from '@/lib/toddler.functions';
+// Server voice not yet set up here; the device's built-in voice is used.
+const SERVER_TTS_ENABLED = false;
 // Speech synthesis, speech recognition, and Gemini Live/TTS client for toddlers
 
 import { CHARACTERS, findCharacter } from '../data/characters';
@@ -483,7 +486,7 @@ export async function speakText(
   const curatedVoice = CURATED_GOOGLE_VOICES.find((v) => v.id === targetVoiceId) || CURATED_GOOGLE_VOICES[0];
 
   // Try Google Gemini server TTS first for lifelike warmth and emotional prosody
-  if (!options?.skipServerTTS) {
+  if (SERVER_TTS_ENABLED && !options?.skipServerTTS) {
     try {
       const response = await fetch('/api/tts', {
         method: 'POST',
@@ -614,19 +617,12 @@ export class ToddlerSpeechRecognizer {
           // If toddler said something not immediately matched, check server AI interpreter
           if (transcript.trim().length >= 1) {
             try {
-              const res = await fetch('/api/interpret-toddler', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ transcript, customWords }),
-              });
-              if (res.ok) {
-                const data = await res.json();
-                if (data.characterId) {
-                  const char = CHARACTERS.find(c => c.id === data.characterId);
-                  if (char && this.onResultCallback) {
-                    this.onResultCallback(char, transcript);
-                    return;
-                  }
+              const data = await interpretToddler({ data: { transcript, customWords } });
+              if (data.characterId) {
+                const char = CHARACTERS.find(c => c.id === data.characterId);
+                if (char && this.onResultCallback) {
+                  this.onResultCallback(char, transcript);
+                  return;
                 }
               }
             } catch {
