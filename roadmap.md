@@ -8,7 +8,7 @@ Source: AI Studio app — voice-first costume dress-up + vocabulary adventure fo
 - Server-side Gemini API (AI captions/vocabulary coaching)
 
 ### Tasks
-- [ ] Get the AI Studio source code (GitHub repo push via Lovable Git sync, or shared files)
+- [x] Get the AI Studio source code (copied from Who_do_you_want_to_be repo)
 - [ ] Assess the source (framework, file structure, how Gemini is called)
 - [ ] Map AI Studio pieces to this stack (React 19 + TanStack Start + Tailwind v4)
   - AR face filters → MediaPipe Face Landmarker in browser (dynamically imported, client-only)
