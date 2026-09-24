@@ -75,6 +75,7 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
   const lastTimeRef = useRef<number>(performance.now());
   const animFrameIdRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const isCameraStartingRef = useRef<boolean>(false);
 
   // Check if running inside iframe preview
   useEffect(() => {
@@ -158,7 +159,8 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
 
   // Camera start helper with detailed diagnostic and fallback handling
   const startCamera = useCallback(async () => {
-    if (isCameraStarting) return;
+    if (isCameraStartingRef.current) return;
+    isCameraStartingRef.current = true;
     setIsCameraStarting(true);
     setCameraErrorMessage(null);
     try {
@@ -237,9 +239,10 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
       setUseCartoonAvatar(true);
       setIsCameraActive(false);
     } finally {
+      isCameraStartingRef.current = false;
       setIsCameraStarting(false);
     }
-  }, [isCameraStarting, onCameraReady]);
+  }, [onCameraReady]);
 
   // Attempt initial camera on mount
   useEffect(() => {
