@@ -18,7 +18,7 @@ export const Route = createFileRoute("/api/tts")({
         if (!key) return new Response("Voice service not connected", { status: 503 });
         const parsed = Body.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return new Response("Bad request", { status: 400 });
-        const voiceId = VOICES[parsed.data.voice] ?? VOICES.us_woman;
+        const voiceId = VOICES[parsed.data.voice] ?? VOICES["us_woman"];
         const res = await fetch(
           `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
           {
