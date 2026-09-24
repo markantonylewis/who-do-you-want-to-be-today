@@ -43,6 +43,7 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const [isCameraStarting, setIsCameraStarting] = useState<boolean>(false);
   const [cameraPermissionStatus, setCameraPermissionStatus] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [cameraErrorMessage, setCameraErrorMessage] = useState<string | null>(null);
   const [isInIframe, setIsInIframe] = useState<boolean>(false);
@@ -157,12 +158,10 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
 
   // Camera start helper with detailed diagnostic and fallback handling
   const startCamera = useCallback(async () => {
+    if (isCameraStarting) return;
+    setIsCameraStarting(true);
     setCameraErrorMessage(null);
     try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      }
-
       if (!navigator?.mediaDevices?.getUserMedia) {
         const msg = 'Camera access is not supported in this browser environment or requires HTTPS.';
         setCameraErrorMessage(msg);
@@ -172,36 +171,57 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
         return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
+      const existingStream = streamRef.current;
+      const existingTrack = existingStream?.getVideoTracks()[0];
+      const stream = existingTrack?.readyState === 'live'
+        ? existingStream
+        : await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: 'user',
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          });
+
+      if (!stream) throw new Error('Camera stream was unavailable.');
 
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        const playVideo = async () => {
-          try {
-            await videoRef.current?.play();
-            setIsCameraActive(true);
-            setCameraPermissionStatus('granted');
-            setUseCartoonAvatar(false);
-            setCameraErrorMessage(null);
-            if (onCameraReady) onCameraReady();
-          } catch (playErr) {
-            console.warn('Video play error:', playErr);
-          }
-        };
+      const video = videoRef.current;
+      if (!video) throw new Error('Camera display was unavailable.');
 
-        videoRef.current.onloadedmetadata = playVideo;
-        if (videoRef.current.readyState >= 1) {
-          playVideo();
-        }
+      video.srcObject = stream;
+      await video.play();
+
+      if (video.readyState < 2 || video.videoWidth === 0) {
+        await new Promise<void>((resolve, reject) => {
+          const timeoutId = window.setTimeout(() => {
+            cleanup();
+            reject(new Error('The camera did not provide a live picture.'));
+          }, 5000);
+          const cleanup = () => {
+            window.clearTimeout(timeoutId);
+            video.removeEventListener('loadeddata', handleReady);
+            video.removeEventListener('error', handleError);
+          };
+          const handleReady = () => {
+            cleanup();
+            resolve();
+          };
+          const handleError = () => {
+            cleanup();
+            reject(new Error('The camera picture could not be displayed.'));
+          };
+          video.addEventListener('loadeddata', handleReady, { once: true });
+          video.addEventListener('error', handleError, { once: true });
+        });
       }
+
+      setIsCameraActive(true);
+      setCameraPermissionStatus('granted');
+      setUseCartoonAvatar(false);
+      setCameraErrorMessage(null);
+      if (onCameraReady) onCameraReady();
     } catch (err: any) {
       console.warn('Camera stream could not start, defaulting to cartoon avatar:', err);
       let msg = 'Camera could not be started.';
@@ -216,8 +236,10 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
       setCameraPermissionStatus('denied');
       setUseCartoonAvatar(true);
       setIsCameraActive(false);
+    } finally {
+      setIsCameraStarting(false);
     }
-  }, [onCameraReady]);
+  }, [isCameraStarting, onCameraReady]);
 
   // Attempt initial camera on mount
   useEffect(() => {
@@ -584,6 +606,7 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
             <button
               id="enable-camera-button"
               onClick={startCamera}
+              disabled={isCameraStarting}
               className="cursor-pointer bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 rounded-full shadow-md border-2 border-white flex items-center gap-1 active:scale-95 transition-transform"
               title="Turn on Camera"
             >
@@ -596,7 +619,7 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
               onClick={() => setUseCartoonAvatar(!useCartoonAvatar)}
               className="cursor-pointer bg-white/95 hover:bg-white text-amber-950 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 rounded-full shadow-md border-2 border-amber-300 flex items-center gap-1 active:scale-95 transition-transform"
             >
-              <span>{useCartoonAvatar ? '📸 Camera' : '🎭 Cartoon'}</span>
+              <span>{isCameraStarting ? 'Starting…' : '📸 Camera'}</span>
             </button>
           )}
 
