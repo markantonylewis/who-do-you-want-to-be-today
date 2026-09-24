@@ -488,7 +488,15 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
   }, [processFrame]);
 
   const openInNewTab = () => {
-    window.open(window.location.href, '_blank');
+    window.open(window.location.href, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCameraAction = () => {
+    if (isInIframe) {
+      openInNewTab();
+      return;
+    }
+    startCamera();
   };
 
   return (
@@ -620,13 +628,13 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
           {cameraPermissionStatus === 'denied' || !isCameraActive ? (
             <button
               id="enable-camera-button"
-              onClick={startCamera}
+              onClick={handleCameraAction}
               disabled={isCameraStarting}
               className="cursor-pointer bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 rounded-full shadow-md border-2 border-white flex items-center gap-1 active:scale-95 transition-transform"
               title="Turn on Camera"
             >
               <span>📸</span>
-              <span>Camera</span>
+              <span>{isInIframe ? 'Open Camera' : 'Camera'}</span>
             </button>
           ) : (
             <button
@@ -671,11 +679,11 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
             <p className="font-black text-amber-950 mb-3">See yourself in the magic mirror</p>
             <button
               id="start-camera-prompt"
-              onClick={startCamera}
+              onClick={handleCameraAction}
               disabled={isCameraStarting}
               className="cursor-pointer bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-black px-5 py-2.5 rounded-full shadow-md active:scale-95 transition-transform"
             >
-              {isCameraStarting ? 'Starting camera…' : 'Turn on camera'}
+              {isCameraStarting ? 'Starting camera…' : isInIframe ? 'Open camera view' : 'Turn on camera'}
             </button>
           </div>
         </div>
