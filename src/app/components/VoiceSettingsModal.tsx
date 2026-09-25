@@ -56,7 +56,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
     setPlayingVoiceId(targetId);
     setIsTesting(true);
     await speakText(
-      'Hello! What would you like to be today? Tap a costume!',
+      'Hello there, what would you like to be today. Say it out loud or tap a costume.',
       () => {
         setIsTesting(false);
         setPlayingVoiceId(null);

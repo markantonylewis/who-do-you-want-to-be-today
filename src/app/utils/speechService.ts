@@ -569,7 +569,7 @@ export class ToddlerSpeechRecognizer {
   private recognition: any = null;
   private isListening = false;
   private onResultCallback: ((character: CharacterItem | null, rawTranscript: string) => void) | null = null;
-  private onActionMatchCallback: (() => void) | null = null;
+  private onActionMatchCallback: ((quality: 'perfect' | 'needs-practice') => void) | null = null;
   private targetWord: string = '';
   private onSpeechDetectedCallback: (() => void) | null = null;
 
@@ -598,12 +598,23 @@ export class ToddlerSpeechRecognizer {
         // 1. If currently listening for an action repetition word (e.g. "fire engine", "digger")
         if (this.onActionMatchCallback && this.targetWord) {
           const clean = transcript.toLowerCase().trim();
-          const targetTokens = this.targetWord.split(' ').filter(Boolean);
-          const isMatch = targetTokens.some(tok => clean.includes(tok)) || clean.length >= 1;
-          if (isMatch) {
+          const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+          const normalizedSpeech = normalize(clean);
+          const normalizedTarget = normalize(this.targetWord);
+          const targetTokens = normalizedTarget.split(' ').filter(Boolean);
+          const spokenTokens = normalizedSpeech.split(' ').filter(Boolean);
+          const exactWords = targetTokens.every((token) => spokenTokens.includes(token));
+          const currentResult = event.results[event.results.length - 1];
+          const isFinal = Boolean(currentResult?.isFinal);
+          const confidence = Number(currentResult?.[0]?.confidence ?? 0);
+          const isPerfect = exactWords && confidence >= 0.82;
+
+          // A confident exact match can move on at once. Less-clear speech waits for the
+          // recognizer's final result before requesting one more practice attempt.
+          if (isPerfect || (isFinal && normalizedSpeech.length > 0)) {
             const cb = this.onActionMatchCallback;
             this.onActionMatchCallback = null;
-            cb();
+            cb(isPerfect ? 'perfect' : 'needs-practice');
             return;
           }
         }
@@ -681,7 +692,7 @@ export class ToddlerSpeechRecognizer {
 
   public startActionWordListener(
     targetWord: string,
-    onMatch: () => void,
+    onMatch: (quality: 'perfect' | 'needs-practice') => void,
     onSpeechDetected?: () => void
   ) {
     this.targetWord = targetWord.toLowerCase().trim();

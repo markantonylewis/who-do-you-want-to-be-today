@@ -125,7 +125,7 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
     const chosenRate = targetRate !== undefined ? targetRate : settings.voiceRate;
     setTestingVoiceId(chosenVoice);
     setIsTestingVoice(true);
-    const greeting = 'Hello there! What would you like to be today? Tap a costume!';
+    const greeting = 'Hello there, what would you like to be today. Say it out loud or tap a costume.';
     speakText(
       greeting,
       () => {
