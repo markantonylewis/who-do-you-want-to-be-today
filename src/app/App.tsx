@@ -181,8 +181,8 @@ export default function App() {
     });
   }, [speakWithState, startListeningForChoice]);
 
-  // Step 2 done -> Step 3 ("Well done.") & Step 4 ("Let's see what xxx do. Press a picture")
-  const handleSecondRepeatDone = useCallback((char: CharacterItem) => {
+  // Finish the character word practice and move on to the picture activities.
+  const handleSecondRepeatDone = useCallback((char: CharacterItem, praise = 'Well done.') => {
     if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
     if (recognizerRef.current) recognizerRef.current.stop();
     setIsListening(false);
@@ -192,10 +192,7 @@ export default function App() {
     hapticRoundComplete();
 
     const plural = getPluralName(char);
-    // User requested audio sequence:
-    // 3. "Well done"
-    // 4. "Let's see what xxx do. Press a picture"
-    speakWithState('Well done.', () => {
+    speakWithState(praise, () => {
       setTimeout(() => {
         speakWithState(`Let's see what ${plural} do. Press a picture.`, () => {
           // Allow exploration and action picture clicking
@@ -212,11 +209,16 @@ export default function App() {
     });
   }, [parentSettings.maxRounds, roundsCompleted, speakWithState, triggerWrapUp]);
 
-  // Step 1 done -> Step 2 ("Well done. Let's try one more time: xxx")
-  const handleFirstRepeatDone = useCallback((char: CharacterItem) => {
+  // A clear first attempt moves on immediately; other attempts get one supportive repeat.
+  const handleFirstRepeatDone = useCallback((char: CharacterItem, pronunciation: 'perfect' | 'needs-practice' = 'needs-practice') => {
     if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
     if (recognizerRef.current) recognizerRef.current.stop();
     setIsListening(false);
+
+    if (pronunciation === 'perfect') {
+      handleSecondRepeatDone(char, 'Perfect!');
+      return;
+    }
 
     playSparkle();
     hapticRepeatSuccess();
@@ -390,8 +392,8 @@ export default function App() {
         setIsListening(true);
 
         if (recognizerRef.current) {
-          recognizerRef.current.startActionWordListener(singular, () => {
-            handleFirstRepeatDone(char);
+          recognizerRef.current.startActionWordListener(singular, (pronunciation) => {
+            handleFirstRepeatDone(char, pronunciation);
           });
         }
 
@@ -405,7 +407,7 @@ export default function App() {
 
   handleSelectCharacterRef.current = handleSelectCharacter;
 
-  // Initial welcome handler: "Hello there, what would you like to be today. Tap a costume"
+  // Initial welcome handler invites either voice or touch selection.
   const handleStartApp = useCallback(() => {
     setRoundsCompleted(0);
     setAppState('greeting');
@@ -414,7 +416,7 @@ export default function App() {
 
     startSessionTimerIfNeeded();
 
-    speakWithState('Hello there, what would you like to be today. Tap a costume', () => {
+    speakWithState('Hello there, what would you like to be today. Say it out loud or tap a costume.', () => {
       setAppState('listening_choice');
       startListeningForChoice();
     });
@@ -511,7 +513,7 @@ export default function App() {
                 }}
                 promptText={
                   appState === 'start' || appState === 'greeting'
-                    ? 'Hello there, what would you like to be today. Tap a costume'
+                    ? 'Hello there, what would you like to be today. Say it out loud or tap a costume.'
                     : 'What would you like to be? Say or tap!'
                 }
               />

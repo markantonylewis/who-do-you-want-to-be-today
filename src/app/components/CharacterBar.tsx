@@ -54,7 +54,7 @@ export const CharacterBar: React.FC<CharacterBarProps> = ({
         >
           <span className="text-base">🌟</span>
           <span className="text-xs sm:text-sm font-black text-amber-950">
-            {promptText || 'Hello there, what would you like to be today. Tap a costume'}
+            {promptText || 'Hello there, what would you like to be today. Say it out loud or tap a costume.'}
           </span>
           <span className="text-xs text-amber-700">🔊</span>
         </button>
