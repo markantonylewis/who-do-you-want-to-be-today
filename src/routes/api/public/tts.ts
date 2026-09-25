@@ -10,7 +10,7 @@ const VOICES: Record<string, string> = {
 
 const Body = z.object({ text: z.string().min(1).max(600), voice: z.string().max(20) });
 
-export const Route = createFileRoute("/api/tts")({
+export const Route = createFileRoute("/api/public/tts")({
   server: {
     handlers: {
       POST: async ({ request }) => {

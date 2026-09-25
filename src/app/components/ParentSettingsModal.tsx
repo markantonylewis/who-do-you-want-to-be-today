@@ -521,7 +521,7 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                   <span>🗣️</span>
-                  <span>Companion Google Voice</span>
+                  <span>Companion Voice (ElevenLabs)</span>
                 </label>
                 <span className="text-[11px] font-bold text-amber-800 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded-full">
                   4 Options

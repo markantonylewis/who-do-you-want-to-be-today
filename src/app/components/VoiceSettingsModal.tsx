@@ -95,7 +95,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                 Companion Voice Settings
               </h2>
               <p className="text-xs font-semibold text-amber-700">
-                Warm Google natural speech for toddlers
+                Natural ElevenLabs voices for toddlers
               </p>
             </div>
           </div>
@@ -116,7 +116,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
           <div className="flex items-center justify-between">
             <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
               <span>🗣️</span>
-              <span>Google Voices</span>
+              <span>ElevenLabs Voices</span>
             </label>
             <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
               4 Natural Voices

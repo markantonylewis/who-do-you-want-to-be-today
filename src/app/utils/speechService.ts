@@ -90,7 +90,7 @@ export const CURATED_GOOGLE_VOICES: CuratedVoiceOption[] = [
     label: 'US English Woman',
     accent: 'US',
     gender: 'Woman',
-    description: 'Warm, clear & maternal (Google US English)',
+    description: 'Sarah – warm & clear (ElevenLabs)',
     geminiVoice: 'Kore',
   },
   {
@@ -99,7 +99,7 @@ export const CURATED_GOOGLE_VOICES: CuratedVoiceOption[] = [
     label: 'US English Man',
     accent: 'US',
     gender: 'Man',
-    description: 'Friendly, upbeat & encouraging (Google US English)',
+    description: 'Chris – friendly & upbeat (ElevenLabs)',
     geminiVoice: 'Puck',
   },
   {
@@ -108,7 +108,7 @@ export const CURATED_GOOGLE_VOICES: CuratedVoiceOption[] = [
     label: 'UK English Woman',
     accent: 'UK',
     gender: 'Woman',
-    description: 'Gentle storybook narrator (Google UK English)',
+    description: 'Lily – gentle storyteller (ElevenLabs)',
     geminiVoice: 'Aoede',
   },
   {
@@ -117,7 +117,7 @@ export const CURATED_GOOGLE_VOICES: CuratedVoiceOption[] = [
     label: 'UK English Man',
     accent: 'UK',
     gender: 'Man',
-    description: 'Kind, cheerful & patient (Google UK English)',
+    description: 'Kind, cheerful & patient (ElevenLabs)',
     geminiVoice: 'Fenrir',
   },
 ];
@@ -493,7 +493,7 @@ export async function speakText(
       const cacheKey = `${targetVoiceId}|${naturalText}`;
       let bytes = ttsCache.get(cacheKey);
       if (!bytes) {
-        const response = await fetch('/api/tts', {
+        const response = await fetch('/api/public/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: naturalText, voice: targetVoiceId }),
