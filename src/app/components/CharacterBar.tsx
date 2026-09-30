@@ -83,9 +83,23 @@ export const CharacterBar: React.FC<CharacterBarProps> = ({
       </div>
 
       {/* Big Tap Costume Cards */}
+      <div className="relative w-full">
+      <button
+        type="button"
+        aria-label="Scroll costumes left"
+        onClick={() => document.getElementById('character-selection-bar')?.scrollBy({ left: -300, behavior: 'smooth' })}
+        className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white/95 border-2 border-amber-300 shadow-md text-amber-950 font-black active:scale-95"
+      >‹</button>
+      <button
+        type="button"
+        aria-label="Scroll costumes right"
+        onClick={() => document.getElementById('character-selection-bar')?.scrollBy({ left: 300, behavior: 'smooth' })}
+        className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white/95 border-2 border-amber-300 shadow-md text-amber-950 font-black active:scale-95"
+      >›</button>
       <div
         id="character-selection-bar"
-        className="w-full overflow-x-auto py-1.5 px-3 no-scrollbar flex items-center gap-3 sm:gap-4 justify-start md:justify-center"
+        onWheel={(e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.currentTarget.scrollLeft += e.deltaY; }}
+        className="w-full overflow-x-auto py-1.5 px-12 no-scrollbar flex items-center gap-3 sm:gap-4 [justify-content:safe_center] snap-x"
       >
         {displayCharacters.map((char, index) => {
           const isSelected = selectedCharacterId === char.id;
