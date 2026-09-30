@@ -67,6 +67,41 @@ function pcmToAudioBuffer(base64Data: string, sampleRate = 24000): AudioBuffer {
   return buffer;
 }
 
+// Shared <audio> player for the natural voice. iPhones play this at full
+// quality even while the microphone is in use (Web Audio gets crackly there).
+let narratorAudio: HTMLAudioElement | null = null;
+let narratorPrimed = false;
+let narratorEndCb: (() => void) | null = null;
+const SILENT_WAV =
+  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YQAAAAA=';
+function getNarratorAudio(): HTMLAudioElement {
+  if (!narratorAudio) {
+    narratorAudio = new Audio();
+    narratorAudio.preload = 'auto';
+    (narratorAudio as any).playsInline = true;
+    narratorAudio.setAttribute('playsinline', '');
+  }
+  return narratorAudio;
+}
+function primeNarratorAudio() {
+  if (narratorPrimed) return;
+  const a = getNarratorAudio();
+  if (a.src && !a.paused) return;
+  try {
+    a.src = SILENT_WAV;
+    const p = a.play();
+    if (p) p.then(() => { narratorPrimed = true; }).catch(() => {});
+  } catch {
+    // ignore
+  }
+}
+if (typeof window !== 'undefined') {
+  ['touchend', 'pointerdown', 'click'].forEach((evt) =>
+    window.addEventListener(evt, primeNarratorAudio, { capture: true, passive: true })
+  );
+}
+const blobUrlCache = new Map<string, string>();
+
 export function stopAnySpeech() {
   if (currentSourceNode) {
     try {
@@ -75,6 +110,10 @@ export function stopAnySpeech() {
       // ignore
     }
     currentSourceNode = null;
+  }
+  if (narratorAudio && !narratorAudio.paused) {
+    narratorEndCb = null;
+    try { narratorAudio.pause(); } catch { /* ignore */ }
   }
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
