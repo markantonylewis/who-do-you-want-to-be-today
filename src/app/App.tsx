@@ -215,6 +215,7 @@ export default function App() {
     if (recognizerRef.current) recognizerRef.current.stop();
     setIsListening(false);
 
+    logAttempt(char.id, getSingularName(char), 'costume', pronunciation);
     if (pronunciation === 'perfect') {
       handleSecondRepeatDone(char, 'Perfect!');
       return;
@@ -282,6 +283,7 @@ export default function App() {
       if (recognizerRef.current) recognizerRef.current.stop();
       setIsListening(false);
 
+      logAttempt(currentCharacter?.id, action.targetWord, 'picture', pronunciation);
       if (pronunciation === 'perfect') {
         handleActionSecondRepeatDone(action, 'Perfect!');
         return;
@@ -304,7 +306,7 @@ export default function App() {
         }, 5500);
       });
     },
-    [handleActionSecondRepeatDone, speakWithState]
+    [handleActionSecondRepeatDone, speakWithState, currentCharacter]
   );
 
   // User clicks an example of what the profession does (picture press exploration)

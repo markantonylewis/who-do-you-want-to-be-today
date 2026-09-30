@@ -17,6 +17,8 @@ export interface ParentSettings {
   preferredVoiceURI: string;
   wrapUpRoutine: 'standard' | 'bedtime' | 'cleanup';
   premiumUnlocked: boolean; // TEMP: testing switch until real purchases are wired up
+  trackProgress: boolean; // premium: save word attempts on this device for the progress report
+  reportPeriod: 'session' | 'week' | 'month' | 'all';
   knownCharacterIds: CharacterId[];
 }
 
@@ -48,6 +50,8 @@ export const DEFAULT_PARENT_SETTINGS: ParentSettings = {
   preferredVoiceURI: 'us_woman',
   wrapUpRoutine: 'standard',
   premiumUnlocked: false,
+  trackProgress: true,
+  reportPeriod: 'week',
   knownCharacterIds: [...ALL_CHARACTER_IDS],
 };
 
