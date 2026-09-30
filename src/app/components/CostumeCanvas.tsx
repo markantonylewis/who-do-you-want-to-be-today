@@ -581,23 +581,8 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
 
       {/* 5. TOP EDGE CONTROLS BAR */}
       <div className="absolute top-3 left-4 right-4 z-30 flex items-center justify-between pointer-events-auto">
-        {/* Left: App Title & Camera Live Status */}
+        {/* Left: Loading status only (title & face-tracked badges removed) */}
         <div className="flex items-center gap-2">
-          <div className="bg-white/95 backdrop-blur-md px-3.5 py-1 rounded-full shadow-md border-2 border-amber-300 flex items-center gap-1.5">
-            <span className="text-base">✨</span>
-            <span className="text-xs sm:text-sm font-black text-amber-950 tracking-tight">
-              Who Am I Today?
-            </span>
-          </div>
-
-          {/* Camera Status Badge */}
-          {isCameraActive && !useCartoonAvatar && (
-            <div className="hidden md:flex items-center gap-1.5 bg-emerald-500/90 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-sm border border-emerald-300">
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <span>{isFaceDetected ? 'Face Tracked 🎯' : 'Looking for Face...'}</span>
-            </div>
-          )}
-
           {isLandmarkerLoading && (
             <div className="hidden lg:flex items-center gap-1 bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-300">
               <span>✨ Magic Face Loading...</span>
