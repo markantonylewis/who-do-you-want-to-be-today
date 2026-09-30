@@ -1,5 +1,6 @@
 // @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import { CharacterId } from '../types';
+import { PREMIUM_CHARACTERS } from '../data/premiumCharacters';
 
 export interface ParentSettings {
   childName: string;
@@ -15,6 +16,8 @@ export interface ParentSettings {
   voicePitch: number; // 0.9 to 1.3
   preferredVoiceURI: string;
   wrapUpRoutine: 'standard' | 'bedtime' | 'cleanup';
+  premiumUnlocked: boolean; // TEMP: testing switch until real purchases are wired up
+  knownCharacterIds: CharacterId[];
 }
 
 export const ALL_CHARACTER_IDS: CharacterId[] = [
@@ -27,6 +30,7 @@ export const ALL_CHARACTER_IDS: CharacterId[] = [
   'dog',
   'dinosaur',
   'star',
+  ...PREMIUM_CHARACTERS.map((c) => c.id),
 ];
 
 export const DEFAULT_PARENT_SETTINGS: ParentSettings = {
@@ -43,6 +47,8 @@ export const DEFAULT_PARENT_SETTINGS: ParentSettings = {
   voicePitch: 1.0,
   preferredVoiceURI: 'us_woman',
   wrapUpRoutine: 'standard',
+  premiumUnlocked: false,
+  knownCharacterIds: [...ALL_CHARACTER_IDS],
 };
 
 const STORAGE_KEY = 'toddler_costume_parent_settings_v1';
@@ -85,8 +91,15 @@ export function getParentSettings(): ParentSettings {
         // Ensure at least 1 character is enabled
         enabledCharacters:
           Array.isArray(parsed.enabledCharacters) && parsed.enabledCharacters.length > 0
-            ? parsed.enabledCharacters
+            ? [
+                ...parsed.enabledCharacters,
+                // Auto-enable costumes added since the settings were last saved
+                ...ALL_CHARACTER_IDS.filter(
+                  (id) => !(parsed.knownCharacterIds || []).includes(id) && !parsed.enabledCharacters.includes(id)
+                ),
+              ]
             : [...ALL_CHARACTER_IDS],
+        knownCharacterIds: [...ALL_CHARACTER_IDS],
       };
       return cachedSettings!;
     }

@@ -1,6 +1,7 @@
 // @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import { CharacterItem, CharacterId } from '../types';
 import { getCustomTrainedWords } from '../utils/toddlerVoiceTraining';
+import { PREMIUM_CHARACTERS } from './premiumCharacters';
 
 export const CHARACTERS: CharacterItem[] = [
   {
@@ -453,6 +454,7 @@ export const CHARACTERS: CharacterItem[] = [
       'twinko', 'tinkle', 'stare', 'stari', 'starry', 'sparkle', 'are'
     ],
   },
+  ...PREMIUM_CHARACTERS,
 ];
 
 export function findCharacter(query: string, customTrainedMap?: Record<string, string[]>): CharacterItem | null {

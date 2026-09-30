@@ -8,9 +8,10 @@ export type CharacterId =
   | 'tiger'
   | 'dog'
   | 'dinosaur'
-  | 'star';
+  | 'star'
+  | string;
 
-export type CharacterCategory = 'occupation' | 'animal' | 'sky';
+export type CharacterCategory = 'occupation' | 'animal' | 'sky' | 'fantasy';
 
 export interface VocabularyWord {
   word: string;
@@ -43,6 +44,7 @@ export interface CharacterItem {
   primaryColor: string;
   accentColor: string;
   nearMisses: string[];
+  premium?: boolean;
 }
 
 export type AppState =

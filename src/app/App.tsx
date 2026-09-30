@@ -7,6 +7,7 @@ import {
   getPluralName,
   getIndefiniteArticle,
 } from './data/characters';
+import { actionsFor, isCharacterLocked } from './data/premiumCharacters';
 import { CharacterId, CharacterItem, CharacterAction, AppState } from './types';
 import { CostumeCanvas } from './components/CostumeCanvas';
 import { CharacterBar } from './components/CharacterBar';
@@ -60,7 +61,11 @@ export default function App() {
   const sessionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasWelcomedRef = useRef<boolean>(false);
-  const currentCharacter = CHARACTERS.find((c) => c.id === selectedCharacterId) || null;
+  const baseCharacter = CHARACTERS.find((c) => c.id === selectedCharacterId) || null;
+  const currentCharacter = useMemo(
+    () => (baseCharacter ? { ...baseCharacter, actions: actionsFor(baseCharacter, parentSettings.premiumUnlocked) } : null),
+    [baseCharacter, parentSettings.premiumUnlocked]
+  );
 
   // Pause speech & recognition while parent gate or settings are open
   useEffect(() => {
@@ -76,9 +81,10 @@ export default function App() {
   // Filter characters according to Parent Settings
   const availableCharacters = useMemo(() => {
     const enabled = parentSettings.enabledCharacters;
-    const filtered = CHARACTERS.filter((c) => enabled.includes(c.id));
-    return filtered.length > 0 ? filtered : CHARACTERS;
-  }, [parentSettings.enabledCharacters]);
+    const unlocked = CHARACTERS.filter((c) => !isCharacterLocked(c, parentSettings.premiumUnlocked));
+    const filtered = unlocked.filter((c) => enabled.includes(c.id));
+    return filtered.length > 0 ? filtered : unlocked;
+  }, [parentSettings.enabledCharacters, parentSettings.premiumUnlocked]);
 
   // Subscribe to Parent Settings updates
   useEffect(() => {
@@ -353,6 +359,7 @@ export default function App() {
   const handleSelectCharacter = useCallback((charId: CharacterId) => {
     const char = CHARACTERS.find((c) => c.id === charId);
     if (!char) return;
+    if (isCharacterLocked(char, getParentSettings().premiumUnlocked)) return;
 
     hapticCharacterTap();
     hasWelcomedRef.current = true;

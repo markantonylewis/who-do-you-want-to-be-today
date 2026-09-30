@@ -1,5 +1,6 @@
 // @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import { CharacterId } from '../types';
+import { PREMIUM_CHARACTERS } from '../data/premiumCharacters';
 
 // Helper to draw shiny star
 function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number) {
@@ -624,6 +625,24 @@ export function drawCostume(
       ctx.fill();
       ctx.stroke();
 
+      break;
+    }
+    default: {
+      // Premium costumes: glowing halo with the costume's emoji as a headpiece
+      const char = PREMIUM_CHARACTERS.find((c) => c.id === characterId);
+      if (!char) break;
+      const cy = -size * 0.42;
+      const glow = ctx.createRadialGradient(0, cy, size * 0.05, 0, cy, size * 0.7);
+      glow.addColorStop(0, char.accentColor + 'aa');
+      glow.addColorStop(1, char.accentColor + '00');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, cy, size * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = `${Math.round(size * 0.85)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(char.iconEmoji, 0, cy);
       break;
     }
   }
