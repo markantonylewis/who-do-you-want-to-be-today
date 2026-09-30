@@ -198,19 +198,10 @@ export default function App() {
     speakWithState(praise, () => {
       setTimeout(() => {
         speakWithState(`Let's see what ${plural} do. Press a picture.`, () => {
-          // Allow exploration and action picture clicking
-          loopTimeoutRef.current = setTimeout(() => {
-            const nextRound = roundsCompleted + 1;
-            setRoundsCompleted(nextRound);
-
-            if (parentSettings.maxRounds > 0 && nextRound >= parentSettings.maxRounds) {
-              triggerWrapUp();
-            }
-          }, 12000);
         });
       }, 350);
     });
-  }, [parentSettings.maxRounds, roundsCompleted, speakWithState, triggerWrapUp]);
+  }, [speakWithState]);
 
   // A clear first attempt moves on immediately; other attempts get one supportive repeat.
   const handleFirstRepeatDone = useCallback((char: CharacterItem, pronunciation: 'perfect' | 'needs-practice' = 'needs-practice') => {
@@ -260,6 +251,10 @@ export default function App() {
 
       speakWithState(praise, () => {
         if (done >= 2) {
+          if (parentSettings.maxRounds > 0 && roundsCompleted >= parentSettings.maxRounds) {
+            triggerWrapUp();
+            return;
+          }
           askNextChoice();
           return;
         }
@@ -271,7 +266,7 @@ export default function App() {
         });
       });
     },
-    [currentCharacter, speakWithState, askNextChoice]
+    [currentCharacter, speakWithState, askNextChoice, parentSettings.maxRounds, roundsCompleted, triggerWrapUp]
   );
 
   // First attempt at a picture word: clear -> "Perfect!"; otherwise one supportive repeat.
@@ -378,6 +373,7 @@ export default function App() {
     setActionRepeatStage(1);
 
     actionsDoneRef.current = 0;
+    setRoundsCompleted((n) => n + 1);
     setSelectedCharacterId(charId);
     setShowCharacterCards(false);
     setAppState('transforming');
