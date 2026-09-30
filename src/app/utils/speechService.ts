@@ -17,10 +17,36 @@ function getPlaybackAudioContext(): AudioContext {
     const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     playbackAudioCtx = new AudioContextClass();
   }
-  if (playbackAudioCtx.state === 'suspended') {
-    playbackAudioCtx.resume();
+  if (playbackAudioCtx.state !== 'running') {
+    playbackAudioCtx.resume().catch(() => {});
   }
   return playbackAudioCtx;
+}
+
+// Mobile browsers (especially iPhone/iPad) only allow audio to start inside a
+// tap. Unlock the audio engine on every tap by resuming it and playing a
+// silent sound, so later narration (which starts after a network fetch) plays.
+function unlockMobileAudio() {
+  try {
+    const ctx = getPlaybackAudioContext();
+    const silent = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = silent;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch {
+    // ignore
+  }
+}
+if (typeof window !== 'undefined') {
+  ['touchend', 'pointerdown', 'click', 'keydown'].forEach((evt) =>
+    window.addEventListener(evt, unlockMobileAudio, { capture: true, passive: true })
+  );
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && playbackAudioCtx && playbackAudioCtx.state !== 'running') {
+      playbackAudioCtx.resume().catch(() => {});
+    }
+  });
 }
 
 // Convert Base64 24kHz raw PCM (from Gemini Live / TTS) to AudioBuffer
@@ -503,7 +529,18 @@ export async function speakText(
         ttsCache.set(cacheKey, bytes);
       }
       const ctx = getPlaybackAudioContext();
-      const buffer = await ctx.decodeAudioData(bytes.slice(0));
+      if (ctx.state !== 'running') {
+        await Promise.race([
+          ctx.resume().catch(() => {}),
+          new Promise((r) => setTimeout(r, 800)),
+        ]);
+      }
+      if (ctx.state !== 'running') throw new Error('Audio engine locked');
+      // Safari needs the callback form of decodeAudioData on older iOS
+      const buffer: AudioBuffer = await new Promise((resolve, reject) => {
+        const p = ctx.decodeAudioData(bytes.slice(0), resolve, reject);
+        if (p && typeof p.then === 'function') p.then(resolve, reject);
+      });
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
       if (currentSourceNode) { try { currentSourceNode.stop(); } catch { /* ignore */ } }
       const source = ctx.createBufferSource();
