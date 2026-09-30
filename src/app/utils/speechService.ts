@@ -529,7 +529,18 @@ export async function speakText(
         ttsCache.set(cacheKey, bytes);
       }
       const ctx = getPlaybackAudioContext();
-      const buffer = await ctx.decodeAudioData(bytes.slice(0));
+      if (ctx.state !== 'running') {
+        await Promise.race([
+          ctx.resume().catch(() => {}),
+          new Promise((r) => setTimeout(r, 800)),
+        ]);
+      }
+      if (ctx.state !== 'running') throw new Error('Audio engine locked');
+      // Safari needs the callback form of decodeAudioData on older iOS
+      const buffer: AudioBuffer = await new Promise((resolve, reject) => {
+        const p = ctx.decodeAudioData(bytes.slice(0), resolve, reject);
+        if (p && typeof p.then === 'function') p.then(resolve, reject);
+      });
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
       if (currentSourceNode) { try { currentSourceNode.stop(); } catch { /* ignore */ } }
       const source = ctx.createBufferSource();
