@@ -328,8 +328,8 @@ export default function App() {
 
         // Listen for the child repeating the target word (or forgiving toddler sound)
         if (recognizerRef.current) {
-          recognizerRef.current.startActionWordListener(action.targetWord, () => {
-            handleActionFirstRepeatDone(action);
+          recognizerRef.current.startActionWordListener(action.targetWord, (q) => {
+            handleActionFirstRepeatDone(action, q);
           });
         }
 
@@ -377,6 +377,7 @@ export default function App() {
     setActionPromptState('idle');
     setActionRepeatStage(1);
 
+    actionsDoneRef.current = 0;
     setSelectedCharacterId(charId);
     setShowCharacterCards(false);
     setAppState('transforming');
