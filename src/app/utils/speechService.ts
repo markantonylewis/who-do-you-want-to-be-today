@@ -567,30 +567,26 @@ export async function speakText(
         bytes = await response.arrayBuffer();
         ttsCache.set(cacheKey, bytes);
       }
-      const ctx = getPlaybackAudioContext();
-      if (ctx.state !== 'running') {
-        await Promise.race([
-          ctx.resume().catch(() => {}),
-          new Promise((r) => setTimeout(r, 800)),
-        ]);
+      let url = blobUrlCache.get(cacheKey);
+      if (!url) {
+        url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+        blobUrlCache.set(cacheKey, url);
       }
-      if (ctx.state !== 'running') throw new Error('Audio engine locked');
-      // Safari needs the callback form of decodeAudioData on older iOS
-      const buffer: AudioBuffer = await new Promise((resolve, reject) => {
-        const p = ctx.decodeAudioData(bytes.slice(0), resolve, reject);
-        if (p && typeof p.then === 'function') p.then(resolve, reject);
-      });
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      if (currentSourceNode) { try { currentSourceNode.stop(); } catch { /* ignore */ } }
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      currentSourceNode = source;
-      source.onended = () => {
-        if (currentSourceNode === source) currentSourceNode = null;
+      const audio = getNarratorAudio();
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        if (narratorEndCb === finish) narratorEndCb = null;
         if (onEnd) onEnd();
       };
-      source.start();
+      narratorEndCb = finish;
+      audio.onended = () => { if (narratorEndCb === finish) finish(); };
+      audio.onerror = () => { if (narratorEndCb === finish) finish(); };
+      audio.src = url;
+      audio.volume = 1;
+      await audio.play();
       return;
     } catch (e) {
       console.warn('Natural voice unavailable, using device voice', e);
