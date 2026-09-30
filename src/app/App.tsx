@@ -170,11 +170,14 @@ export default function App() {
   }, [availableCharacters, speakWithState]);
 
   // Ask what else they want to be and listen again
+  const actionsDoneRef = useRef(0);
   const askNextChoice = useCallback(() => {
     setAppState('asking_next');
     setActiveAction(null);
     setActionPromptState('idle');
-    speakWithState('What else would you like to be?', () => {
+    setActionRepeatStage(1);
+    setShowCharacterCards(true);
+    speakWithState('What else would you like to be today? Say it out loud or tap a costume.', () => {
       setAppState('listening_choice');
       setShowCharacterCards(true);
       startListeningForChoice();
@@ -194,7 +197,7 @@ export default function App() {
     const plural = getPluralName(char);
     speakWithState(praise, () => {
       setTimeout(() => {
-        speakWithState(`Let's see what else ${plural} do. Press a picture.`, () => {
+        speakWithState(`Let's see what ${plural} do. Press a picture.`, () => {
           // Allow exploration and action picture clicking
           loopTimeoutRef.current = setTimeout(() => {
             const nextRound = roundsCompleted + 1;
@@ -241,9 +244,9 @@ export default function App() {
     });
   }, [handleSecondRepeatDone, speakWithState]);
 
-  // Stage 2 of action repetition: child repeated second time -> celebrate and invite next picture
+  // Finish a picture round: praise, then either invite the second picture or return to costumes.
   const handleActionSecondRepeatDone = useCallback(
-    (action: CharacterAction) => {
+    (action: CharacterAction, praise: string = 'Well done!') => {
       if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
       if (recognizerRef.current) recognizerRef.current.stop();
       setIsListening(false);
@@ -252,8 +255,14 @@ export default function App() {
       playSparkle();
       hapticRoundComplete();
 
-      // Voice praise: "Well done!"
-      speakWithState('Well done!', () => {
+      actionsDoneRef.current += 1;
+      const done = actionsDoneRef.current;
+
+      speakWithState(praise, () => {
+        if (done >= 2) {
+          askNextChoice();
+          return;
+        }
         const plural = currentCharacter ? getPluralName(currentCharacter) : 'they';
         speakWithState(`Let's see what else ${plural} do. Press a picture.`, () => {
           setActionPromptState('idle');
@@ -262,32 +271,35 @@ export default function App() {
         });
       });
     },
-    [currentCharacter, speakWithState]
+    [currentCharacter, speakWithState, askNextChoice]
   );
 
-  // Stage 1 of action repetition: child repeated first time -> "Well done! Let's try one more time: xxx"
+  // First attempt at a picture word: clear -> "Perfect!"; otherwise one supportive repeat.
   const handleActionFirstRepeatDone = useCallback(
-    (action: CharacterAction) => {
+    (action: CharacterAction, pronunciation: 'perfect' | 'needs-practice' = 'needs-practice') => {
       if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
       if (recognizerRef.current) recognizerRef.current.stop();
       setIsListening(false);
+
+      if (pronunciation === 'perfect') {
+        handleActionSecondRepeatDone(action, 'Perfect!');
+        return;
+      }
 
       playSparkle();
       hapticRepeatSuccess();
       setActionRepeatStage(2);
 
-      // User requested: "The voice should say "well done" or "good job" and invite them to try one more time"
-      speakWithState(`Well done! Let's try one more time: ${action.targetWord}.`, () => {
+      speakWithState(`Well done. Let's try that one more time: ${action.targetWord}.`, () => {
         setIsListening(true);
         if (recognizerRef.current) {
-          recognizerRef.current.startActionWordListener(action.targetWord, () => {
-            handleActionSecondRepeatDone(action);
+          recognizerRef.current.startActionWordListener(action.targetWord, (q) => {
+            handleActionSecondRepeatDone(action, q === 'perfect' ? 'Perfect!' : 'Well done!');
           });
         }
 
-        // Forgiving fallback timeout for shy toddlers
         loopTimeoutRef.current = setTimeout(() => {
-          handleActionSecondRepeatDone(action);
+          handleActionSecondRepeatDone(action, 'Well done!');
         }, 5500);
       });
     },
@@ -316,8 +328,8 @@ export default function App() {
 
         // Listen for the child repeating the target word (or forgiving toddler sound)
         if (recognizerRef.current) {
-          recognizerRef.current.startActionWordListener(action.targetWord, () => {
-            handleActionFirstRepeatDone(action);
+          recognizerRef.current.startActionWordListener(action.targetWord, (q) => {
+            handleActionFirstRepeatDone(action, q);
           });
         }
 
@@ -365,6 +377,7 @@ export default function App() {
     setActionPromptState('idle');
     setActionRepeatStage(1);
 
+    actionsDoneRef.current = 0;
     setSelectedCharacterId(charId);
     setShowCharacterCards(false);
     setAppState('transforming');
