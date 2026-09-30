@@ -113,9 +113,9 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
     if (type === 'all') {
       updateSetting('enabledCharacters', [...ALL_CHARACTER_IDS]);
     } else if (type === 'helpers') {
-      updateSetting('enabledCharacters', ['firefighter', 'police_officer', 'builder', 'doctor']);
+      updateSetting('enabledCharacters', CHARACTERS.filter((c) => c.category === 'occupation').map((c) => c.id));
     } else if (type === 'animals') {
-      updateSetting('enabledCharacters', ['lion', 'tiger', 'dog', 'dinosaur', 'star']);
+      updateSetting('enabledCharacters', CHARACTERS.filter((c) => c.category === 'animal').map((c) => c.id));
     }
     playPop();
   };
