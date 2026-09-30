@@ -147,6 +147,7 @@ export const CharacterBar: React.FC<CharacterBarProps> = ({
           );
         })}
       </div>
+      </div>
     </motion.div>
   );
 };
