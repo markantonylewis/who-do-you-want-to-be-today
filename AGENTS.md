@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep premium face-avatar artwork in `premiumCostumeDrawers.ts` and call it from the main costume dispatcher, so the 23 bespoke masks remain maintainable.
