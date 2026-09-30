@@ -9,6 +9,15 @@ import {
 } from './data/characters';
 import { actionsFor, isCharacterLocked } from './data/premiumCharacters';
 import { CharacterId, CharacterItem, CharacterAction, AppState } from './types';
+import { recordAttempt } from './utils/progressStore';
+import { getParentSettings as readSettingsForLog } from './utils/parentSettings';
+
+// Premium progress report: remember each first try on this device.
+function logAttempt(costumeId: string | undefined, word: string, kind: 'costume' | 'picture', q: 'perfect' | 'needs-practice') {
+  const s = readSettingsForLog();
+  if (!costumeId || !s.premiumUnlocked || s.trackProgress === false) return;
+  recordAttempt({ c: costumeId, w: word, k: kind, q });
+}
 import { CostumeCanvas } from './components/CostumeCanvas';
 import { CharacterBar } from './components/CharacterBar';
 import { VocabularyBanner } from './components/VocabularyBanner';
@@ -215,6 +224,7 @@ export default function App() {
     if (recognizerRef.current) recognizerRef.current.stop();
     setIsListening(false);
 
+    logAttempt(char.id, getSingularName(char), 'costume', pronunciation);
     if (pronunciation === 'perfect') {
       handleSecondRepeatDone(char, 'Perfect!');
       return;
@@ -282,6 +292,7 @@ export default function App() {
       if (recognizerRef.current) recognizerRef.current.stop();
       setIsListening(false);
 
+      logAttempt(currentCharacter?.id, action.targetWord, 'picture', pronunciation);
       if (pronunciation === 'perfect') {
         handleActionSecondRepeatDone(action, 'Perfect!');
         return;
@@ -304,7 +315,7 @@ export default function App() {
         }, 5500);
       });
     },
-    [handleActionSecondRepeatDone, speakWithState]
+    [handleActionSecondRepeatDone, speakWithState, currentCharacter]
   );
 
   // User clicks an example of what the profession does (picture press exploration)
