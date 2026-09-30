@@ -17,3 +17,4 @@ Source: AI Studio app — voice-first costume dress-up + vocabulary adventure fo
 - [x] Rebuild app at `/` (replace placeholder index route)
 - [ ] Verify camera + mic flows in preview
 - [ ] Optional: warm AI narrator voice (currently device voice)
+- [x] Replace premium emoji headpieces with bespoke face-tracked avatar masks
