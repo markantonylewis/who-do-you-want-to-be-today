@@ -603,17 +603,11 @@ export class ToddlerSpeechRecognizer {
           const normalizedTarget = normalize(this.targetWord);
           const targetTokens = normalizedTarget.split(' ').filter(Boolean);
           const spokenTokens = normalizedSpeech.split(' ').filter(Boolean);
-          const stem = (w: string) => w.replace(/(es|s)$/, '');
-          const joinedSpeech = spokenTokens.join('');
-          const exactWords =
-            targetTokens.length > 0 &&
-            (targetTokens.every((token) => spokenTokens.some((s) => s === token || stem(s) === stem(token))) ||
-              joinedSpeech.includes(targetTokens.join('')));
+          const exactWords = targetTokens.every((token) => spokenTokens.includes(token));
           const currentResult = event.results[event.results.length - 1];
           const isFinal = Boolean(currentResult?.isFinal);
-          const rawConfidence = Number(currentResult?.[0]?.confidence ?? 0);
-          // Many browsers report 0 confidence (esp. mobile / interim); treat that as unknown.
-          const isPerfect = exactWords && (rawConfidence === 0 || rawConfidence >= 0.6);
+          const confidence = Number(currentResult?.[0]?.confidence ?? 0);
+          const isPerfect = exactWords && confidence >= 0.82;
 
           // A confident exact match can move on at once. Less-clear speech waits for the
           // recognizer's final result before requesting one more practice attempt.

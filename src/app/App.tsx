@@ -194,7 +194,7 @@ export default function App() {
     const plural = getPluralName(char);
     speakWithState(praise, () => {
       setTimeout(() => {
-        speakWithState(`Let's see what else ${plural} do. Press a picture.`, () => {
+        speakWithState(`Let's see what ${plural} do. Press a picture.`, () => {
           // Allow exploration and action picture clicking
           loopTimeoutRef.current = setTimeout(() => {
             const nextRound = roundsCompleted + 1;
