@@ -232,6 +232,15 @@ export const CHARACTERS: CharacterItem[] = [
         targetWord: 'mane',
         praise: 'Well done!',
       },
+      {
+        id: 'roar',
+        emoji: '🦁',
+        actionTitle: 'Roar really loudly',
+        actionSentence: 'Lions roar really loudly.',
+        repeatPrompt: 'Can you say roar?',
+        targetWord: 'roar',
+        praise: 'Well done!',
+      },
     ],
     relatedWords: [
       { word: 'Fluffy Mane', emoji: '🦁', actionHint: 'So soft and big!' },
@@ -272,6 +281,15 @@ export const CHARACTERS: CharacterItem[] = [
         targetWord: 'stripe',
         praise: 'Well done!',
       },
+      {
+        id: 'pounce',
+        emoji: '🐅',
+        actionTitle: 'Pounce and leap',
+        actionSentence: 'Tigers pounce and leap.',
+        repeatPrompt: 'Can you say pounce?',
+        targetWord: 'pounce',
+        praise: 'Well done!',
+      },
     ],
     relatedWords: [
       { word: 'Stripes', emoji: '🐯', actionHint: 'Black and orange stripes!' },
@@ -282,7 +300,7 @@ export const CHARACTERS: CharacterItem[] = [
     primaryColor: '#ea580c', // tiger deep orange
     accentColor: '#18181b', // bold tiger black
     nearMisses: [
-      'tiger', 'tigger', 'stripes', 'stripe', 'tyger', 'tigre', 'tiga', 'orange cat', 'jungle cat', 'grr', 'grrr', 'tigey', 'daniel'
+      'tiger', 'tigger', 'stripes', 'stripe', 'tyger', 'tigre', 'tiga', 'orange cat', 'jungle cat', 'grr', 'grrr', 'tigey', 'daniel', 'pounce', 'pouns', 'leap', 'jump'
     ],
   },
   {
@@ -312,6 +330,15 @@ export const CHARACTERS: CharacterItem[] = [
         targetWord: 'bone',
         praise: 'Well done!',
       },
+      {
+        id: 'ball',
+        emoji: '⚽',
+        actionTitle: 'Fetch bouncy balls',
+        actionSentence: 'Dogs fetch bouncy balls.',
+        repeatPrompt: 'Can you say ball?',
+        targetWord: 'ball',
+        praise: 'Well done!',
+      },
     ],
     relatedWords: [
       { word: 'Puppy Tail', emoji: '🐕', actionHint: 'Wag wag wag!' },
@@ -322,7 +349,7 @@ export const CHARACTERS: CharacterItem[] = [
     primaryColor: '#854d0e', // warm golden brown
     accentColor: '#f59e0b', // playful amber
     nearMisses: [
-      'dog', 'doggy', 'doggie', 'puppy', 'pup', 'woof', 'bark', 'bow wow', 'puppies', 'doggies', 'wuff', 'dodo', 'doge', 'ruff', 'wo'
+      'dog', 'doggy', 'doggie', 'puppy', 'pup', 'woof', 'bark', 'bow wow', 'puppies', 'doggies', 'wuff', 'dodo', 'doge', 'ruff', 'wo', 'ball', 'fetch', 'baw'
     ],
   },
   {
@@ -350,6 +377,15 @@ export const CHARACTERS: CharacterItem[] = [
         actionSentence: 'Dinosaurs have cool pointy spikes.',
         repeatPrompt: 'Can you say spike?',
         targetWord: 'spike',
+        praise: 'Well done!',
+      },
+      {
+        id: 'stomp',
+        emoji: '🦖',
+        actionTitle: 'Stomp giant feet',
+        actionSentence: 'Dinosaurs stomp their giant feet.',
+        repeatPrompt: 'Can you say stomp?',
+        targetWord: 'stomp',
         praise: 'Well done!',
       },
     ],
