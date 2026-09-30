@@ -300,7 +300,7 @@ export const CHARACTERS: CharacterItem[] = [
     primaryColor: '#ea580c', // tiger deep orange
     accentColor: '#18181b', // bold tiger black
     nearMisses: [
-      'tiger', 'tigger', 'stripes', 'stripe', 'tyger', 'tigre', 'tiga', 'orange cat', 'jungle cat', 'grr', 'grrr', 'tigey', 'daniel'
+      'tiger', 'tigger', 'stripes', 'stripe', 'tyger', 'tigre', 'tiga', 'orange cat', 'jungle cat', 'grr', 'grrr', 'tigey', 'daniel', 'pounce', 'pouns', 'leap', 'jump'
     ],
   },
   {
@@ -349,7 +349,7 @@ export const CHARACTERS: CharacterItem[] = [
     primaryColor: '#854d0e', // warm golden brown
     accentColor: '#f59e0b', // playful amber
     nearMisses: [
-      'dog', 'doggy', 'doggie', 'puppy', 'pup', 'woof', 'bark', 'bow wow', 'puppies', 'doggies', 'wuff', 'dodo', 'doge', 'ruff', 'wo'
+      'dog', 'doggy', 'doggie', 'puppy', 'pup', 'woof', 'bark', 'bow wow', 'puppies', 'doggies', 'wuff', 'dodo', 'doge', 'ruff', 'wo', 'ball', 'fetch', 'baw'
     ],
   },
   {
