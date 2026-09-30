@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { CHARACTERS } from '../data/characters';
+import { isCharacterLocked } from '../data/premiumCharacters';
 import { CharacterId } from '../types';
 import {
   ParentSettings,
@@ -385,6 +386,22 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
         {/* TAB 2: COSTUMES TRAY */}
         {activeTab === 'costumes' && (
           <div className="flex flex-col gap-4 py-1">
+            <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-3">
+              <div>
+                <div className="text-xs font-black text-amber-950">
+                  👑 Premium pack {settings.premiumUnlocked ? '(unlocked)' : '(locked)'}
+                </div>
+                <p className="text-[11px] text-amber-900">
+                  24 extra costumes and a 4th picture for every costume. Testing switch until purchases are added.
+                </p>
+              </div>
+              <button
+                onClick={() => updateSetting('premiumUnlocked', !settings.premiumUnlocked)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black ${settings.premiumUnlocked ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}
+              >
+                {settings.premiumUnlocked ? 'On' : 'Off'}
+              </button>
+            </div>
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">
@@ -418,10 +435,12 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {CHARACTERS.map((char) => {
-                const isEnabled = settings.enabledCharacters.includes(char.id);
+                const locked = isCharacterLocked(char, settings.premiumUnlocked);
+                const isEnabled = !locked && settings.enabledCharacters.includes(char.id);
                 return (
                   <button
                     key={char.id}
+                    disabled={locked}
                     onClick={() => toggleCharacter(char.id)}
                     className={`p-3 rounded-2xl border-2 text-left flex items-center justify-between transition-all ${
                       isEnabled
@@ -443,7 +462,7 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
                         isEnabled ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-slate-600'
                       }`}
                     >
-                      {isEnabled ? '✓' : '✕'}
+                      {locked ? '🔒' : isEnabled ? '✓' : '✕'}
                     </div>
                   </button>
                 );
