@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { CHARACTERS } from '../data/characters';
 import { isCharacterLocked } from '../data/premiumCharacters';
+import { ProgressReport } from './ProgressReport';
 import { CharacterId } from '../types';
 import {
   ParentSettings,
@@ -32,7 +33,7 @@ interface ParentSettingsModalProps {
   onSettingsSaved?: (settings: ParentSettings) => void;
 }
 
-type TabType = 'profile' | 'costumes' | 'speech' | 'voice_sensory';
+type TabType = 'profile' | 'costumes' | 'speech' | 'voice_sensory' | 'progress';
 
 export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
   isOpen,
@@ -240,10 +241,52 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
             <span>🎙️</span>
             <span>Voice & Sensory</span>
           </button>
+
+          <button
+            id="tab-progress-btn"
+            onClick={() => setActiveTab('progress')}
+            className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'progress' ? 'bg-amber-500 text-white shadow-md' : 'text-amber-900 hover:bg-amber-100'
+            }`}
+          >
+            <span>📈</span>
+            <span>Progress</span>
+            {!settings.premiumUnlocked && <span>🔒</span>}
+          </button>
         </div>
 
         {/* Scrollable Tab Content Area */}
         <div className="flex-1 overflow-y-auto pr-1 min-h-0 space-y-4">
+
+        {activeTab === 'progress' && (
+          settings.premiumUnlocked ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                <div>
+                  <p className="font-black text-sm text-slate-900">Keep a progress report</p>
+                  <p className="text-xs text-slate-600">Remember how each word went, on this device.</p>
+                </div>
+                <button
+                  onClick={() => updateSetting('trackProgress', settings.trackProgress === false)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black ${settings.trackProgress !== false ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-slate-800'}`}
+                >
+                  {settings.trackProgress !== false ? 'On' : 'Off'}
+                </button>
+              </div>
+              <ProgressReport
+                childName={settings.childName}
+                period={settings.reportPeriod || 'week'}
+                onPeriodChange={(p) => updateSetting('reportPeriod', p)}
+              />
+            </div>
+          ) : (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center">
+              <p className="text-3xl mb-2">🔒📈</p>
+              <p className="font-black text-amber-950">Progress reports are part of the Premium pack</p>
+              <p className="text-sm text-amber-900 mt-1">See which words your child says clearly, which need practice, and how they improve over time.</p>
+            </div>
+          )
+        )}
 
         {/* TAB 1: CHILD PROFILE & TIME LIMITS */}
         {activeTab === 'profile' && (
