@@ -250,7 +250,7 @@ export default function App() {
       const done = actionsDoneRef.current;
 
       speakWithState(praise, () => {
-        if (done >= 3) {
+        if (done >= 2) {
           if (parentSettings.maxRounds > 0 && roundsCompleted >= parentSettings.maxRounds) {
             triggerWrapUp();
             return;
