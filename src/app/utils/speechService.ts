@@ -586,13 +586,17 @@ export async function speakText(
       const cacheKey = `${targetVoiceId}|${naturalText}`;
       let bytes = ttsCache.get(cacheKey);
       if (!bytes) {
-        const response = await fetch('/api/public/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: naturalText, voice: targetVoiceId }),
-        });
-        if (!response.ok) throw new Error(`TTS ${response.status}`);
-        bytes = await response.arrayBuffer();
+        bytes = (await readStoredTts(cacheKey)) || undefined;
+        if (!bytes) {
+          const response = await fetch('/api/public/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: naturalText, voice: targetVoiceId }),
+          });
+          if (!response.ok) throw new Error(`TTS ${response.status}`);
+          bytes = await response.arrayBuffer();
+          saveStoredTts(cacheKey, bytes);
+        }
         ttsCache.set(cacheKey, bytes);
       }
       let url = blobUrlCache.get(cacheKey);
