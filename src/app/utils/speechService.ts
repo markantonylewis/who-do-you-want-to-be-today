@@ -3,6 +3,34 @@ import { interpretToddler } from '@/lib/toddler.functions';
 // Natural narrator voice via ElevenLabs (/api/tts); falls back to device voice.
 const SERVER_TTS_ENABLED = true;
 const ttsCache = new Map<string, ArrayBuffer>();
+// Permanent on-device store: each phrase is fetched from ElevenLabs once, then
+// replayed from the device forever (survives reloads and new sessions).
+const TTS_STORE = 'whoami-tts-v1';
+function ttsStoreUrl(key: string) {
+  return `/__tts-cache/${encodeURIComponent(key)}`;
+}
+async function readStoredTts(key: string): Promise<ArrayBuffer | null> {
+  try {
+    if (typeof caches === 'undefined') return null;
+    const cache = await caches.open(TTS_STORE);
+    const hit = await cache.match(ttsStoreUrl(key));
+    return hit ? await hit.arrayBuffer() : null;
+  } catch {
+    return null;
+  }
+}
+async function saveStoredTts(key: string, bytes: ArrayBuffer) {
+  try {
+    if (typeof caches === 'undefined') return;
+    const cache = await caches.open(TTS_STORE);
+    await cache.put(
+      ttsStoreUrl(key),
+      new Response(bytes.slice(0), { headers: { 'Content-Type': 'audio/mpeg' } })
+    );
+  } catch {
+    // storage full or unavailable — memory cache still works this session
+  }
+}
 // Speech synthesis, speech recognition, and Gemini Live/TTS client for toddlers
 
 import { CHARACTERS, findCharacter } from '../data/characters';
@@ -558,13 +586,17 @@ export async function speakText(
       const cacheKey = `${targetVoiceId}|${naturalText}`;
       let bytes = ttsCache.get(cacheKey);
       if (!bytes) {
-        const response = await fetch('/api/public/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: naturalText, voice: targetVoiceId }),
-        });
-        if (!response.ok) throw new Error(`TTS ${response.status}`);
-        bytes = await response.arrayBuffer();
+        bytes = (await readStoredTts(cacheKey)) || undefined;
+        if (!bytes) {
+          const response = await fetch('/api/public/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: naturalText, voice: targetVoiceId }),
+          });
+          if (!response.ok) throw new Error(`TTS ${response.status}`);
+          bytes = await response.arrayBuffer();
+          saveStoredTts(cacheKey, bytes);
+        }
         ttsCache.set(cacheKey, bytes);
       }
       let url = blobUrlCache.get(cacheKey);
