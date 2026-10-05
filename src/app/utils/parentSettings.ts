@@ -76,7 +76,7 @@ export function getParentSettings(): ParentSettings {
       const voiceLower = String(voiceId).toLowerCase();
       if (voiceLower.includes('microsoft')) {
         voiceId = 'us_woman';
-      } else if (!['us_woman', 'us_man', 'uk_woman', 'uk_man'].includes(voiceId)) {
+      } else if (!['us_woman', 'us_man', 'uk_woman', 'uk_man', 'mark'].includes(voiceId)) {
         if (voiceLower.includes('uk') && (voiceLower.includes('male') || voiceLower.includes('man'))) {
           voiceId = 'uk_man';
         } else if (voiceLower.includes('uk')) {

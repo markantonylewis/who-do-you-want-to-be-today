@@ -586,7 +586,7 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
                   <span>Companion Voice (ElevenLabs)</span>
                 </label>
                 <span className="text-[11px] font-bold text-amber-800 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded-full">
-                  4 Options
+                  5 Options
                 </span>
               </div>
 

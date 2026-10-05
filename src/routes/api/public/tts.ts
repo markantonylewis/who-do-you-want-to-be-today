@@ -6,6 +6,7 @@ const VOICES: Record<string, string> = {
   us_man: "iP95p4xoKVk53GoZ742B", // Chris
   uk_woman: "pFZP5JQG7iQjIQuC4Bku", // Lily
   uk_man: "JBFqnCBsd6RMkjVDRZzb", // George
+  mark: "BN2oC5lFPoQBvCp33GzZ", // "Mark Lewis British Man" — the parent's own cloned voice
 };
 
 const Body = z.object({ text: z.string().min(1).max(600), voice: z.string().max(20) });
