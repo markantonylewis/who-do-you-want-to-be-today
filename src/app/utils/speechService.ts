@@ -164,7 +164,7 @@ const BANNED_VOICE_SUBSTRINGS = [
 
 let cachedVoices: SpeechSynthesisVoice[] = [];
 
-export type CuratedVoiceId = 'us_woman' | 'us_man' | 'uk_woman' | 'uk_man';
+export type CuratedVoiceId = 'us_woman' | 'us_man' | 'uk_woman' | 'uk_man' | 'mark';
 
 export interface CuratedVoiceOption {
   id: CuratedVoiceId;
@@ -211,6 +211,15 @@ export const CURATED_GOOGLE_VOICES: CuratedVoiceOption[] = [
     accent: 'UK',
     gender: 'Man',
     description: 'Kind, cheerful & patient (ElevenLabs)',
+    geminiVoice: 'Fenrir',
+  },
+  {
+    id: 'mark',
+    name: 'Mark Lewis British Man',
+    label: "Your Voice (Mark)",
+    accent: 'UK',
+    gender: 'Man',
+    description: "Your own cloned voice (ElevenLabs)",
     geminiVoice: 'Fenrir',
   },
 ];
@@ -261,7 +270,7 @@ export function isMaleVoiceName(nameOrId: string): boolean {
 
 export function parseVoiceId(raw: string | null | undefined): CuratedVoiceId {
   if (!raw) return 'us_woman';
-  if (raw === 'us_woman' || raw === 'us_man' || raw === 'uk_woman' || raw === 'uk_man') {
+  if (raw === 'us_woman' || raw === 'us_man' || raw === 'uk_woman' || raw === 'uk_man' || raw === 'mark') {
     return raw;
   }
   const matchCurated = CURATED_GOOGLE_VOICES.find(
@@ -310,7 +319,8 @@ export function resolveVoiceForCuratedId(
     return { voice: fallback || null, pitch: 1.0 };
   }
 
-  if (id === 'uk_man') {
+  if (id === 'uk_man' || id === 'mark') {
+    // Mark is ElevenLabs-only; the device fallback uses a UK male voice.
     // 1. Google UK English Male (genuine Google UK male voice in Chrome)
     const gUkMale = googleVoices.find(
       (v) => isUkVoice(v) && isMaleVoiceName(v.name)
