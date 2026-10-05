@@ -215,8 +215,8 @@ export const CURATED_GOOGLE_VOICES: CuratedVoiceOption[] = [
   },
   {
     id: 'mark',
-    name: 'Mark Lewis British Man',
-    label: "Your Voice (Mark)",
+    name: 'Mark (app creator)',
+    label: "Mark (app creator)",
     accent: 'UK',
     gender: 'Man',
     description: "Your own cloned voice (ElevenLabs)",
