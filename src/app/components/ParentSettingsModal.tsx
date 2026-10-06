@@ -25,6 +25,7 @@ import {
 } from '../utils/speechService';
 import { getCustomTrainedWords } from '../utils/toddlerVoiceTraining';
 import { playSparkle, playPop } from '../utils/audioEffects';
+import { requestCamera, requestMic } from '../utils/permissions';
 
 interface ParentSettingsModalProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
   const [isTestingVoice, setIsTestingVoice] = useState<boolean>(false);
   const [testingVoiceId, setTestingVoiceId] = useState<string | null>(null);
   const [showSavedToast, setShowSavedToast] = useState<boolean>(false);
+  const [deviceNote, setDeviceNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -89,6 +91,26 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
       setShowSavedToast(false);
       onClose();
     }, 400);
+  };
+
+  // Close without keeping any changes made in this visit.
+  const handleCancel = () => {
+    stopAnySpeech();
+    onClose();
+  };
+
+  const toggleDevice = async (kind: 'camera' | 'mic') => {
+    const key = kind === 'camera' ? 'cameraEnabled' : 'micEnabled';
+    if (settings[key]) {
+      updateSetting(key, false);
+      return;
+    }
+    const ok = kind === 'camera' ? await requestCamera() : await requestMic();
+    updateSetting(key, ok);
+    if (!ok) setDeviceNote(kind === 'camera'
+      ? 'The camera could not be turned on. Check the browser permission for this site (in the embedded preview, open the app in a new tab).'
+      : 'The microphone could not be turned on. Check the browser permission for this site. Your child can still play by tapping pictures.');
+    else setDeviceNote(null);
   };
 
   const handleResetDefaults = () => {
@@ -149,7 +171,7 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
-          handleSaveAndClose();
+          handleCancel();
         }
       }}
     >
@@ -175,9 +197,10 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
           </div>
           <button
             id="close-parent-settings-btn"
-            onClick={handleSaveAndClose}
+            onClick={handleCancel}
+            aria-label="Cancel without saving"
             className="w-9 h-9 flex items-center justify-center rounded-full bg-amber-50 hover:bg-amber-100 text-amber-900 font-black text-lg transition-colors"
-            title="Save & Close"
+            title="Cancel without saving"
           >
             ✕
           </button>
@@ -307,8 +330,48 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
                 className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 font-bold text-slate-900 placeholder:font-normal placeholder:text-slate-400"
               />
               <div className="text-xs text-amber-800 bg-amber-50 rounded-xl p-2.5 border border-amber-200 leading-relaxed">
-                💡 <strong>How this works:</strong> Displays your child's name visually on the celebration wrap-up screen and badges (no names are spoken in the audio).
+                Kept on this device for the progress report. It is not shown to your child or spoken aloud.
               </div>
+            </div>
+
+            {/* Camera and microphone */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-700">Camera and microphone</span>
+              {([
+                ['camera', 'Camera', 'Puts the costume on your child\'s face. Off: a cartoon face wears it.'],
+                ['mic', 'Microphone', 'Lets your child say the words. Off: they tap the right picture instead.'],
+              ] as const).map(([kind, label, help]) => {
+                const on = kind === 'camera' ? settings.cameraEnabled : settings.micEnabled;
+                return (
+                  <div key={kind} className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-black text-slate-900">{label}</div>
+                      <div className="text-xs text-slate-600">{help}</div>
+                    </div>
+                    <button
+                      id={`toggle-${kind}-btn`}
+                      onClick={() => toggleDevice(kind)}
+                      role="switch"
+                      aria-checked={on}
+                      className={`shrink-0 px-4 py-2 rounded-xl text-sm font-black ${on ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-700'}`}
+                    >
+                      {on ? 'On' : 'Off'}
+                    </button>
+                  </div>
+                );
+              })}
+              {deviceNote && <p className="text-xs text-rose-700">{deviceNote}</p>}
+              <p className="text-xs text-slate-600">No recordings of your child are ever kept. Only results (which words were tried) are saved on this device.</p>
+              <button
+                id="rerun-setup-btn"
+                onClick={() => {
+                  saveParentSettings({ setupComplete: false });
+                  onClose();
+                }}
+                className="self-start text-xs font-black text-amber-800 underline"
+              >
+                Run setup again
+              </button>
             </div>
 
             {/* Session Screen Time Limit */}
@@ -831,7 +894,7 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
             onClick={handleSaveAndClose}
             className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black text-sm rounded-xl shadow-md transition-all flex items-center gap-1.5"
           >
-            <span>Save & Return to Child Mode</span>
+            <span>Save</span>
             {showSavedToast && <span>✓</span>}
           </button>
         </div>
