@@ -10,3 +10,5 @@
 <!-- LOVABLE:END -->
 
 - Keep premium face-avatar artwork in `premiumCostumeDrawers.ts` and call it from the main costume dispatcher, so the 23 bespoke masks remain maintainable.
+- Camera/mic permissions are requested only in `ParentSetup` or Parent Settings (via `utils/permissions.ts`); child screens never prompt or show errors, because the child must never hit a dead end.
+- Word attempts are logged through `logAttempt` in `App.tsx` into `progressStore` (results only, never audio), so the parent report has one source of truth.

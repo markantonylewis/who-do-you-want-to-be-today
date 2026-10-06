@@ -10,8 +10,7 @@ interface CostumeCanvasProps {
   selectedCharacter: CharacterId | null;
   onCameraReady?: () => void;
   showMagicBurst?: boolean;
-  roundsCompleted?: number;
-  maxRounds?: number;
+  starsEarned?: number;
   onRestart?: () => void;
   showRestart?: boolean;
   onOpenParentGate?: () => void;
@@ -32,8 +31,7 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
   selectedCharacter,
   onCameraReady,
   showMagicBurst,
-  roundsCompleted = 0,
-  maxRounds = 5,
+  starsEarned = 0,
   onRestart,
   showRestart = false,
   onOpenParentGate,
@@ -248,23 +246,21 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
 
   // Reconnect automatically only when the browser has already granted access.
   // New permission prompts must follow a user tap, especially in embedded previews.
+  // The camera is decided once in parent setup. If allowed, start it; if not,
+  // or if it fails, the child silently gets the cartoon face.
+  const cameraWanted = parentSettings.setupComplete && parentSettings.cameraEnabled;
   useEffect(() => {
-    let cancelled = false;
-    navigator.permissions?.query({ name: 'camera' as PermissionName })
-      .then((status) => {
-        if (!cancelled && status.state === 'granted') startCamera();
-      })
-      .catch(() => {
-        // Some browsers do not expose camera permission state. The visible
-        // camera button below remains the reliable user-gesture fallback.
-      });
-    return () => {
-      cancelled = true;
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      }
-    };
-  }, [startCamera]);
+    if (cameraWanted) {
+      startCamera();
+    } else if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      setIsCameraActive(false);
+    }
+  }, [cameraWanted, startCamera]);
+  useEffect(() => () => {
+    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+  }, []);
 
   // Synchronous, non-blocking AR render loop
   const processFrame = useCallback(() => {
@@ -487,18 +483,6 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
     };
   }, [processFrame]);
 
-  const openInNewTab = () => {
-    window.open(window.location.href, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleCameraAction = () => {
-    if (isInIframe) {
-      openInNewTab();
-      return;
-    }
-    startCamera();
-  };
-
   return (
     <div
       id="costume-canvas-container"
@@ -579,143 +563,61 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
       {/* 4. Magic Mirror Whimsical Golden Frame */}
       <div className="absolute inset-2 sm:inset-3 rounded-3xl border-4 sm:border-6 border-amber-400/50 shadow-2xl pointer-events-none ring-2 ring-white/40" />
 
-      {/* 5. TOP EDGE CONTROLS BAR */}
+      {/* 5. TOP EDGE CONTROLS BAR (icons only, no text for the child) */}
       <div className="absolute top-3 left-4 right-4 z-30 flex items-center justify-between pointer-events-auto">
-        {/* Left: Loading status only (title & face-tracked badges removed) */}
-        <div className="flex items-center gap-2">
-          {isLandmarkerLoading && (
-            <div className="hidden lg:flex items-center gap-1 bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-300">
-              <span>✨ Magic Face Loading...</span>
-            </div>
+        {/* Left: earned stars, shown as icons */}
+        <div
+          className="flex items-center gap-0.5 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full shadow-md border-2 border-amber-300 min-h-[32px]"
+          role="img"
+          aria-label={`${starsEarned} stars`}
+        >
+          {starsEarned === 0 ? (
+            <StarIcon filled={false} />
+          ) : (
+            Array.from({ length: Math.min(starsEarned, 10) }).map((_, i) => <StarIcon key={i} filled />)
           )}
         </div>
 
-        {/* Right: Stars, Camera Switch, Restart & Parent Settings */}
+        {/* Right: Restart & Parent Settings */}
         <div className="flex items-center gap-2">
-          {/* Stars Tracker */}
-          {parentSettings.maxRounds > 0 ? (
-            <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full shadow-md border-2 border-amber-300">
-              <span className="text-sm">⭐</span>
-              <span className="text-xs sm:text-sm font-black text-amber-950">
-                {roundsCompleted}/{maxRounds}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full shadow-md border-2 border-amber-300">
-              <span className="text-sm">⭐</span>
-              <span className="text-xs sm:text-sm font-black text-amber-950">
-                Play
-              </span>
-            </div>
-          )}
-
-          {/* Camera / Avatar Switch Button */}
-          {cameraPermissionStatus === 'denied' || !isCameraActive ? (
-            <button
-              id="enable-camera-button"
-              onClick={handleCameraAction}
-              disabled={isCameraStarting}
-              className="cursor-pointer bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 rounded-full shadow-md border-2 border-white flex items-center gap-1 active:scale-95 transition-transform"
-              title="Turn on Camera"
-            >
-              <span>📸</span>
-              <span>{isInIframe ? 'Open Camera' : 'Camera'}</span>
-            </button>
-          ) : (
-            <button
-              id="toggle-mirror-mode"
-              onClick={() => setUseCartoonAvatar(!useCartoonAvatar)}
-              className="cursor-pointer bg-white/95 hover:bg-white text-amber-950 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 rounded-full shadow-md border-2 border-amber-300 flex items-center gap-1 active:scale-95 transition-transform"
-            >
-              <span>{useCartoonAvatar ? '📸 Camera' : '🎭 Cartoon'}</span>
-            </button>
-          )}
-
-          {/* Start Over Button */}
           {showRestart && onRestart && (
             <button
               id="header-restart-btn"
               onClick={onRestart}
-              className="cursor-pointer bg-white/95 hover:bg-white text-amber-900 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 rounded-full shadow-md border-2 border-amber-300 active:scale-95 transition-transform"
-              title="Start Over"
+              aria-label="Start over"
+              className="cursor-pointer bg-white/95 hover:bg-white text-amber-900 w-10 h-10 rounded-full shadow-md border-2 border-amber-300 border-b-4 flex items-center justify-center active:translate-y-0.5 active:border-b-2 transition-transform"
             >
-              🏠
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
+                <path d="M12 3 2 11h3v9h5v-6h4v6h5v-9h3z" />
+              </svg>
             </button>
           )}
-
-          {/* Parent & Grown-Up Settings with Toddler-Proof Gate */}
           <button
             id="open-parent-gate-btn"
             onClick={onOpenParentGate}
-            className="cursor-pointer bg-white/95 hover:bg-white text-amber-950 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 rounded-full shadow-md border-2 border-amber-300 flex items-center gap-1 active:scale-95 transition-transform"
-            title="Parent & Grown-Up Settings (Locked)"
+            aria-label="Grown-ups"
+            className="cursor-pointer bg-white/95 hover:bg-white text-amber-950 w-10 h-10 rounded-full shadow-md border-2 border-amber-300 border-b-4 flex items-center justify-center active:translate-y-0.5 active:border-b-2 transition-transform"
           >
-            <span>⚙️</span>
-            <span className="hidden sm:inline">Parents</span>
-            <span className="text-[10px]">🔒</span>
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+              <circle cx="16" cy="7" r="2.2" />
+              <circle cx="10" cy="17" r="2.2" />
+            </svg>
           </button>
         </div>
       </div>
-
-      {!isCameraActive && !hasCameraAttempted && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center px-4 pointer-events-none">
-          <div className="pointer-events-auto bg-white/95 border-2 border-amber-300 shadow-xl rounded-2xl p-5 text-center max-w-xs">
-            <div className="text-4xl mb-2" aria-hidden="true">📸</div>
-            <p className="font-black text-amber-950 mb-3">See yourself in the magic mirror</p>
-            <button
-              id="start-camera-prompt"
-              onClick={handleCameraAction}
-              disabled={isCameraStarting}
-              className="cursor-pointer bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-black px-5 py-2.5 rounded-full shadow-md active:scale-95 transition-transform"
-            >
-              {isCameraStarting ? 'Starting camera…' : isInIframe ? 'Open camera view' : 'Turn on camera'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 6. Helpful Camera Diagnostics Banner (If camera permission is blocked or denied) */}
-      {(cameraPermissionStatus === 'denied' || cameraErrorMessage) && (
-        <div
-          id="camera-diagnostic-banner"
-          className="absolute bottom-24 sm:bottom-28 left-4 right-4 max-w-lg mx-auto z-20 bg-white/95 backdrop-blur-md rounded-2xl border-2 border-amber-300 shadow-xl p-3 sm:p-4 flex flex-col gap-2 text-center"
-        >
-          <div className="flex items-center justify-center gap-2 text-amber-950 font-black text-xs sm:text-sm">
-            <span>📷</span>
-            <span>Why is the Camera face not showing?</span>
-          </div>
-          <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
-            {cameraErrorMessage ||
-              'Your browser or iframe preview has camera access restricted, so we are using the Toddler Cartoon face.'}
-          </p>
-          <div className="flex items-center justify-center gap-2 mt-1">
-            <button
-              id="retry-camera-btn"
-              onClick={startCamera}
-              className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-3 py-1.5 rounded-full shadow transition-all active:scale-95"
-            >
-              📸 Retry Camera
-            </button>
-            {isInIframe && (
-              <button
-                id="open-new-tab-btn"
-                onClick={openInNewTab}
-                className="cursor-pointer bg-sky-500 hover:bg-sky-600 text-white font-black text-xs px-3 py-1.5 rounded-full shadow transition-all active:scale-95 flex items-center gap-1"
-                title="Open in top-level browser tab to allow camera"
-              >
-                <span>↗️ Open in New Tab</span>
-              </button>
-            )}
-            <button
-              id="dismiss-camera-hint-btn"
-              onClick={() => setCameraErrorMessage(null)}
-              className="cursor-pointer bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-2.5 py-1.5 rounded-full transition-all"
-            >
-              Keep Cartoon
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
+const StarIcon: React.FC<{ filled: boolean }> = ({ filled }) => (
+  <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+    <path
+      d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"
+      fill={filled ? '#fbbf24' : 'none'}
+      stroke="#b45309"
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+    />
+  </svg>
+);

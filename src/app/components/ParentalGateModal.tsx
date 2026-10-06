@@ -1,5 +1,5 @@
 // @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { playSparkle, playPop } from '../utils/audioEffects';
 
@@ -9,91 +9,80 @@ interface ParentalGateModalProps {
   onCancel: () => void;
 }
 
-const NUMBER_WORDS: { word: string; value: number }[] = [
-  { word: 'THREE', value: 3 },
-  { word: 'FOUR', value: 4 },
-  { word: 'FIVE', value: 5 },
-  { word: 'SIX', value: 6 },
-  { word: 'SEVEN', value: 7 },
-  { word: 'EIGHT', value: 8 },
-  { word: 'NINE', value: 9 },
-];
+const MAX_WRONG = 3;
+const LOCKOUT_MS = 60_000;
+const LOCK_KEY = 'whoami_gate_lock_until';
 
-export const ParentalGateModal: React.FC<ParentalGateModalProps> = ({
-  isOpen,
-  onSuccess,
-  onCancel,
-}) => {
-  const [target, setTarget] = useState<{ word: string; value: number }>(NUMBER_WORDS[0]);
-  const [choices, setChoices] = useState<number[]>([]);
-  const [isWrong, setIsWrong] = useState<boolean>(false);
-  const [holdProgress, setHoldProgress] = useState<number>(0);
-  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
+function newQuestion() {
+  const a = 3 + Math.floor(Math.random() * 7); // 3–9
+  const b = 6 + Math.floor(Math.random() * 4); // 6–9
+  return { a, b, answer: a * b };
+}
 
-  // Generate a random question whenever gate opens
+function readLock(): number {
+  try {
+    return Number(localStorage.getItem(LOCK_KEY) || 0);
+  } catch {
+    return 0;
+  }
+}
+
+/** Grown-ups only: a written multiplication typed on a number pad, with a lockout after wrong answers. */
+export const ParentalGateModal: React.FC<ParentalGateModalProps> = ({ isOpen, onSuccess, onCancel }) => {
+  const [q, setQ] = useState(newQuestion);
+  const [entry, setEntry] = useState('');
+  const [wrong, setWrong] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(0);
+  const [now, setNow] = useState(Date.now());
+  const [shake, setShake] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
-      generateQuestion();
-      setHoldProgress(0);
-      setIsWrong(false);
-    } else {
-      clearHold();
+      setQ(newQuestion());
+      setEntry('');
+      setWrong(0);
+      setLockedUntil(readLock());
     }
   }, [isOpen]);
 
-  const generateQuestion = () => {
-    const randomTarget = NUMBER_WORDS[Math.floor(Math.random() * NUMBER_WORDS.length)];
-    setTarget(randomTarget);
+  const locked = lockedUntil > now;
+  useEffect(() => {
+    if (!isOpen || !locked) return;
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, [isOpen, locked]);
 
-    const pool = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((n) => n !== randomTarget.value);
-    // Shuffle pool and take 3 distractors
-    const shuffled = pool.sort(() => Math.random() - 0.5);
-    const options = [randomTarget.value, shuffled[0], shuffled[1], shuffled[2]].sort(
-      () => Math.random() - 0.5
-    );
-    setChoices(options);
-  };
-
-  const handleSelectNumber = (num: number) => {
-    if (num === target.value) {
+  const submit = () => {
+    if (locked || !entry) return;
+    if (Number(entry) === q.answer) {
       playSparkle();
       onSuccess();
+      return;
+    }
+    playPop();
+    setShake(true);
+    setTimeout(() => setShake(false), 400);
+    const w = wrong + 1;
+    setEntry('');
+    setQ(newQuestion());
+    if (w >= MAX_WRONG) {
+      const until = Date.now() + LOCKOUT_MS;
+      try { localStorage.setItem(LOCK_KEY, String(until)); } catch { /* ignore */ }
+      setLockedUntil(until);
+      setNow(Date.now());
+      setWrong(0);
     } else {
-      playPop();
-      setIsWrong(true);
-      setTimeout(() => {
-        setIsWrong(false);
-        generateQuestion();
-      }, 700);
+      setWrong(w);
     }
   };
 
-  // Optional 3-second hold fallback for adults
-  const startHold = () => {
-    clearHold();
-    const startTime = Date.now();
-    const duration = 2500; // 2.5 seconds hold
-    holdTimerRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(100, (elapsed / duration) * 100);
-      setHoldProgress(progress);
-      if (elapsed >= duration) {
-        clearHold();
-        playSparkle();
-        onSuccess();
-      }
-    }, 40);
-  };
-
-  const clearHold = () => {
-    if (holdTimerRef.current) {
-      clearInterval(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-    setHoldProgress(0);
+  const press = (d: string) => {
+    if (locked) return;
+    setEntry((e) => (e.length >= 3 ? e : e + d));
   };
 
   if (!isOpen) return null;
+  const secondsLeft = Math.ceil((lockedUntil - now) / 1000);
 
   return (
     <div
@@ -107,73 +96,62 @@ export const ParentalGateModal: React.FC<ParentalGateModalProps> = ({
         id="parental-gate-card"
         initial={{ scale: 0.9, opacity: 0, y: 15 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.9, opacity: 0, y: 15 }}
         className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border-4 border-amber-300 p-6 flex flex-col items-center gap-4 text-center text-slate-800"
       >
-        <div className="w-14 h-14 rounded-2xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-3xl shadow-inner">
-          🔒
+        <div className="w-14 h-14 rounded-2xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-amber-900" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+          </svg>
         </div>
 
         <div>
-          <h2 className="text-xl font-black text-amber-950">Grown-Ups Only</h2>
-          <p className="text-xs text-slate-600 mt-0.5">
-            To keep little fingers from changing settings, please answer:
-          </p>
+          <h2 className="text-xl font-black text-amber-950">Grown-ups only</h2>
+          <p className="text-xs text-slate-600 mt-0.5">Type the answer to open settings.</p>
         </div>
 
-        {/* Challenge Box */}
-        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 w-full flex flex-col items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
-            Tap the number
-          </span>
-          <span className="text-3xl font-black text-amber-950 tracking-wider">
-            {target.word}
-          </span>
-        </div>
-
-        {/* Number buttons */}
-        <div className={`grid grid-cols-4 gap-2.5 w-full ${isWrong ? 'animate-shake' : ''}`}>
-          {choices.map((num) => (
-            <button
-              key={num}
-              onClick={() => handleSelectNumber(num)}
-              className="h-14 bg-white hover:bg-amber-50 active:bg-amber-100 border-2 border-slate-300 hover:border-amber-400 rounded-2xl font-black text-2xl text-slate-800 shadow-sm transition-transform active:scale-95 flex items-center justify-center"
-            >
-              {num}
-            </button>
-          ))}
-        </div>
-
-        {/* Alternative hold option */}
-        <div className="w-full pt-1 border-t border-slate-100 flex flex-col items-center gap-2">
-          <span className="text-[11px] text-slate-500 font-semibold">
-            Or press and hold below:
-          </span>
-          <button
-            onMouseDown={startHold}
-            onMouseUp={clearHold}
-            onMouseLeave={clearHold}
-            onTouchStart={startHold}
-            onTouchEnd={clearHold}
-            className="relative w-full overflow-hidden py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
-          >
-            {holdProgress > 0 && (
+        {locked ? (
+          <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-4 w-full">
+            <p className="font-black text-rose-900">Too many wrong answers.</p>
+            <p className="text-sm text-rose-800">Try again in {secondsLeft} seconds.</p>
+          </div>
+        ) : (
+          <>
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 w-full">
+              <div className="text-sm font-bold text-amber-800">What is</div>
+              <div className="text-3xl font-black text-amber-950">{q.a} × {q.b}?</div>
               <div
-                className="absolute inset-0 bg-amber-300/60 transition-all pointer-events-none"
-                style={{ width: `${holdProgress}%` }}
-              />
-            )}
-            <span className="relative z-10">
-              {holdProgress > 0 ? `Holding... (${Math.round(holdProgress)}%)` : 'Hold to Enter Settings'}
-            </span>
-          </button>
-        </div>
+                className={`mt-2 h-12 rounded-xl bg-white border-2 border-amber-300 flex items-center justify-center text-2xl font-black ${shake ? 'animate-shake' : ''}`}
+                aria-live="polite"
+              >
+                {entry || <span className="text-slate-300">?</span>}
+              </div>
+              {wrong > 0 && (
+                <p className="text-xs text-rose-700 mt-1">Not quite. {MAX_WRONG - wrong} tries left.</p>
+              )}
+            </div>
 
-        <button
-          onClick={onCancel}
-          className="text-xs font-bold text-slate-500 hover:text-slate-800 underline transition-colors"
-        >
-          Cancel & Return to Play
+            <div className="grid grid-cols-3 gap-2 w-full">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
+                <button key={d} onClick={() => press(d)} className="h-12 rounded-xl border-2 border-b-4 border-slate-300 font-black text-xl active:translate-y-0.5 active:border-b-2">
+                  {d}
+                </button>
+              ))}
+              <button onClick={() => setEntry((e) => e.slice(0, -1))} aria-label="Delete" className="h-12 rounded-xl border-2 border-b-4 border-slate-300 font-black text-lg active:translate-y-0.5 active:border-b-2">
+                Del
+              </button>
+              <button onClick={() => press('0')} className="h-12 rounded-xl border-2 border-b-4 border-slate-300 font-black text-xl active:translate-y-0.5 active:border-b-2">
+                0
+              </button>
+              <button onClick={submit} id="parent-gate-submit" className="h-12 rounded-xl bg-amber-500 border-b-4 border-amber-700 text-white font-black text-lg active:translate-y-0.5 active:border-b-2">
+                OK
+              </button>
+            </div>
+          </>
+        )}
+
+        <button onClick={onCancel} className="text-xs font-bold text-slate-500 hover:text-slate-800 underline">
+          Cancel
         </button>
       </motion.div>
     </div>

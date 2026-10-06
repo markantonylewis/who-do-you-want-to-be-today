@@ -5,6 +5,8 @@ import { CHARACTERS } from '../data/characters';
 import { CharacterId, CharacterItem } from '../types';
 import { ListeningIndicator } from './ListeningIndicator';
 import { hapticCharacterTap } from '../utils/haptics';
+import { CostumeThumb } from './CostumeThumb';
+import { ReplayButton } from './ReplayButton';
 
 interface CharacterBarProps {
   selectedCharacterId: CharacterId | null;
@@ -18,6 +20,7 @@ interface CharacterBarProps {
   showCloseButton?: boolean;
   onClose?: () => void;
   characters?: CharacterItem[];
+  micAvailable?: boolean;
 }
 
 export const CharacterBar: React.FC<CharacterBarProps> = ({
@@ -32,6 +35,7 @@ export const CharacterBar: React.FC<CharacterBarProps> = ({
   showCloseButton = false,
   onClose,
   characters = CHARACTERS,
+  micAvailable = true,
 }) => {
   const displayCharacters = characters.length > 0 ? characters : CHARACTERS;
 
@@ -44,23 +48,12 @@ export const CharacterBar: React.FC<CharacterBarProps> = ({
       transition={{ type: 'spring', stiffness: 320, damping: 28 }}
       className="w-full flex flex-col items-center gap-1.5"
     >
-      {/* Sleek Top Hint Strip */}
+      {/* Replay speaker + mic status (no text for the child) */}
       <div className="w-full max-w-2xl mx-auto flex items-center justify-between px-3">
-        <button
-          id="character-bar-prompt-pill"
-          onClick={onPromptClick || onMicClick}
-          className="bg-white/95 backdrop-blur-md px-3.5 py-1 rounded-full shadow-md border-2 border-amber-300 flex items-center gap-1.5 animate-pulse cursor-pointer hover:bg-white active:scale-95 transition-all text-left"
-          title="Tap to hear prompt"
-        >
-          <span className="text-base">🌟</span>
-          <span className="text-xs sm:text-sm font-black text-amber-950">
-            {promptText || 'Hello there, what would you like to be today. Say it out loud or tap a costume.'}
-          </span>
-          <span className="text-xs text-amber-700">🔊</span>
-        </button>
+        <ReplayButton onClick={onPromptClick || onMicClick} />
 
         <div className="flex items-center gap-2">
-          {onMicClick && (
+          {onMicClick && micAvailable && (
             <ListeningIndicator
               compact
               isListening={isListening}
@@ -72,11 +65,10 @@ export const CharacterBar: React.FC<CharacterBarProps> = ({
             <button
               id="close-character-bar-btn"
               onClick={onClose}
-              className="cursor-pointer bg-white/95 hover:bg-white text-amber-950 border-2 border-amber-300 rounded-full px-3 py-1 text-xs font-black shadow-md active:scale-95 transition-transform flex items-center gap-1"
-              title="Return to mirror"
+              aria-label="Back to the mirror"
+              className="cursor-pointer bg-white/95 hover:bg-white text-amber-950 border-2 border-b-4 border-amber-300 rounded-full w-11 h-11 shadow-md active:translate-y-0.5 active:border-b-2 transition-transform flex items-center justify-center"
             >
-              <span>🪞</span>
-              <span>Mirror</span>
+              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
             </button>
           )}
         </div>
@@ -86,13 +78,13 @@ export const CharacterBar: React.FC<CharacterBarProps> = ({
       <div className="relative w-full">
       <button
         type="button"
-        aria-label="Scroll costumes left"
+        aria-label="More costumes left"
         onClick={() => document.getElementById('character-selection-bar')?.scrollBy({ left: -300, behavior: 'smooth' })}
         className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white/95 border-2 border-amber-300 shadow-md text-amber-950 font-black active:scale-95"
       >‹</button>
       <button
         type="button"
-        aria-label="Scroll costumes right"
+        aria-label="More costumes right"
         onClick={() => document.getElementById('character-selection-bar')?.scrollBy({ left: 300, behavior: 'smooth' })}
         className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white/95 border-2 border-amber-300 shadow-md text-amber-950 font-black active:scale-95"
       >›</button>
@@ -107,18 +99,9 @@ export const CharacterBar: React.FC<CharacterBarProps> = ({
             <motion.button
               key={char.id}
               id={`character-btn-${char.id}`}
+              aria-label={char.name}
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.92 }}
-              animate={
-                !selectedCharacterId && index === 0
-                  ? { y: [0, -4, 0] }
-                  : undefined
-              }
-              transition={
-                !selectedCharacterId && index === 0
-                  ? { repeat: Infinity, duration: 2, ease: 'easeInOut' }
-                  : undefined
-              }
               disabled={disabled}
               onClick={() => {
                 hapticCharacterTap();
@@ -133,16 +116,7 @@ export const CharacterBar: React.FC<CharacterBarProps> = ({
                 backgroundColor: isSelected ? char.primaryColor : undefined,
               }}
             >
-              <span className="text-3xl sm:text-4xl filter drop-shadow">
-                {char.iconEmoji}
-              </span>
-              <span
-                className={`mt-1 text-xs sm:text-sm font-black tracking-wide text-center leading-tight ${
-                  isSelected ? 'text-white' : 'text-slate-800'
-                }`}
-              >
-                {char.name}
-              </span>
+              <CostumeThumb id={char.id} size={72} />
             </motion.button>
           );
         })}

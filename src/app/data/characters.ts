@@ -451,60 +451,56 @@ export const CHARACTERS: CharacterItem[] = [
     nearMisses: [
       'star', 'stars', 'twinkle', 'twinkle star', 'sky', 'sun', 'bright', 'yellow star', 'little star',
       'shooting star', 'starlight', 'twinkle twinkle', 'shine', 'night sky', 'tar', 'car', 'sta', 'ta', 'stah',
-      'twinko', 'tinkle', 'stare', 'stari', 'starry', 'sparkle', 'are'
+      'twinko', 'tinkle', 'stare', 'stari', 'starry', 'sparkle'
     ],
   },
   ...PREMIUM_CHARACTERS,
 ];
 
 export function findCharacter(query: string, customTrainedMap?: Record<string, string[]>): CharacterItem | null {
-  const clean = query.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
+  const clean = query.trim().toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
   if (!clean) return null;
+  const padded = ` ${clean} `;
+  const norm = (p: string) => p.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const wholeWord = (p: string) => {
+    const n = norm(p);
+    return n.length > 0 && (padded.includes(` ${n} `) || padded.includes(` ${n}s `) || padded.includes(` ${n}es `));
+  };
+  // Pick the costume with the longest matching phrase, so "a dog" beats "do".
+  const best = (test: (char: CharacterItem) => string[]) => {
+    let winner: CharacterItem | null = null;
+    let len = 0;
+    for (const char of CHARACTERS) {
+      for (const p of test(char)) {
+        const n = norm(p);
+        if (n.length > len) { winner = char; len = n.length; }
+      }
+    }
+    return winner;
+  };
 
-  // 1. Check parent-trained custom words first (highest priority)
+  // 1. Parent-trained words (whole words / phrases)
   const trained = customTrainedMap || (typeof window !== 'undefined' ? getCustomTrainedWords() : null);
   if (trained) {
-    for (const char of CHARACTERS) {
-      const customList = trained[char.id] || [];
-      for (const customWord of customList) {
-        const cw = customWord.toLowerCase().trim();
-        if (cw && (clean === cw || clean.includes(cw) || cw.includes(clean))) {
-          return char;
-        }
-      }
-    }
+    const hit = best((char) => (trained[char.id] || []).filter((w) => wholeWord(w)));
+    if (hit) return hit;
   }
 
-  // 2. Direct exact match on id or name
-  for (const char of CHARACTERS) {
-    if (char.id === clean || char.name.toLowerCase() === clean) {
-      return char;
-    }
-  }
+  // 2. Exact names across all characters, as whole words
+  const names = (char: CharacterItem) =>
+    [char.id.replace(/_/g, ' '), char.name, char.pluralName || ''].filter(Boolean);
+  const named = best((char) => names(char).filter((n) => wholeWord(n)));
+  if (named) return named;
 
-  // 3. Check near misses list
-  for (const char of CHARACTERS) {
-    for (const phrase of char.nearMisses) {
-      if (clean === phrase || clean.includes(phrase)) {
-        return char;
-      }
-      if (phrase.length <= 3 && phrase === clean) {
-        return char;
-      }
-    }
-  }
-
-  // 4. Token fuzzy match (allow 2-letter toddler approximations)
-  const words = clean.split(/\s+/).filter(Boolean);
-  for (const word of words) {
-    for (const char of CHARACTERS) {
-      if (char.nearMisses.some(nm => nm === word || (word.length >= 3 && nm.includes(word)))) {
-        return char;
-      }
-    }
-  }
-
-  return null;
+  // 3. Near misses: short ones only as whole words; longer ones may sit inside a word
+  const near = best((char) =>
+    char.nearMisses.filter((nm) => {
+      const n = norm(nm);
+      if (!n) return false;
+      return n.length <= 3 ? wholeWord(n) : padded.includes(n) || wholeWord(n);
+    })
+  );
+  return near;
 }
 
 export function getSingularName(char: CharacterItem): string {

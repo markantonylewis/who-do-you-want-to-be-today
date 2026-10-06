@@ -24,16 +24,18 @@ export const ProgressReport: React.FC<{ childName?: string; period: Period; onPe
   const name = childName?.trim() || 'Your child';
   const costumeName = (id: string) => CHARACTERS.find((c) => c.id === id)?.name || id;
 
+  const words = new Set(current.map((a) => a.w)).size;
   const sentence = !now.total
     ? `No words practised ${period === 'session' ? 'yet' : 'in this period'}. Play a session and the report will fill in.`
-    : `${name} practised ${now.total} word${now.total === 1 ? '' : 's'}${period !== 'session' ? ` across ${now.sessions} session${now.sessions === 1 ? '' : 's'}` : ''} and said ${now.perfect} clearly first time (${now.rate}%).` +
+    : `${name} practised ${words} different word${words === 1 ? '' : 's'}${period !== 'session' ? ` across ${now.sessions} session${now.sessions === 1 ? '' : 's'}` : ''}. ` +
+      (now.rate >= 70 ? 'Most words are coming out clearly.' : now.rate >= 35 ? 'Many words are getting clearer.' : 'Still practising, which is exactly how it should be.') +
       (change === null
         ? ''
-        : change > 0
-          ? ` That's ${change} points better than the period before. Great progress!`
-          : change < 0
-            ? ` That's ${-change} points lower than the period before, which is normal from day to day.`
-            : ' That matches the period before.') +
+        : change >= 10
+          ? ' Words are getting clearer than in the period before.'
+          : change <= -10
+            ? ' A little less clear than before, which is normal from day to day.'
+            : ' About the same as the period before.') +
       (now.favourites.length ? ` Favourite costume: ${costumeName(now.favourites[0][0])}.` : '');
 
   return (

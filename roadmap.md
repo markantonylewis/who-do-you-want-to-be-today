@@ -18,3 +18,13 @@ Source: AI Studio app — voice-first costume dress-up + vocabulary adventure fo
 - [ ] Verify camera + mic flows in preview
 - [ ] Optional: warm AI narrator voice (currently device voice)
 - [x] Replace premium emoji headpieces with bespoke face-tracked avatar masks
+
+## Functional pass (parent setup, fallbacks, stars for words)
+- [x] One-time parent setup (camera, mic, iOS audio, name, no-recordings note); editable in settings
+- [x] Silent fallbacks: mic refused -> tap mode; camera off -> cartoon face
+- [x] Stars for trying words (mic on) / correct picture tap (mic off)
+- [x] Word-attempt log: clear / good try / not yet / didn't try, said or tapped
+- [x] No text on child screens; replay speaker; locked costumes hidden
+- [x] findCharacter whole-word / longest-match fix (+ tests)
+- [x] Parent gate: multiplication + lockout; settings cancel vs Save
+- [ ] Flat word-picture illustrations to replace placeholder emoji on pictures (needs art pass)
