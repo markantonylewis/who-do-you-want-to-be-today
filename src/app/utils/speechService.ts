@@ -111,7 +111,7 @@ function getNarratorAudio(): HTMLAudioElement {
   }
   return narratorAudio;
 }
-function primeNarratorAudio() {
+export function primeNarratorAudio() {
   if (narratorPrimed) return;
   const a = getNarratorAudio();
   if (a.src && !a.paused) return;
