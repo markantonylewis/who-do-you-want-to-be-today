@@ -3,6 +3,8 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { CharacterItem, CharacterAction } from '../types';
 import { ListeningIndicator } from './ListeningIndicator';
+import { CostumeThumb } from './CostumeThumb';
+import { ReplayButton } from './ReplayButton';
 import {
   hapticActionPress,
   hapticRepeatSuccess,
@@ -23,6 +25,8 @@ interface VocabularyBannerProps {
   onRepeatTap?: () => void;
   onShowCards?: () => void;
   onCharacterBadgeClick?: () => void;
+  onReplay?: () => void;
+  micAvailable?: boolean;
 }
 
 export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
@@ -39,6 +43,8 @@ export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
   onRepeatTap,
   onShowCards,
   onCharacterBadgeClick,
+  onReplay,
+  micAvailable = true,
 }) => {
   const isActionRepeating = Boolean(activeAction && actionPromptState === 'repeating');
   const isCostumeRepeating = stage === 'repeat' && !activeAction;
@@ -53,44 +59,25 @@ export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
       className="w-full max-w-3xl mx-auto bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-xl border-3 p-2 sm:p-3 flex flex-col gap-2 select-none"
       style={{ borderColor: character.primaryColor }}
     >
-      {/* Tier 1: Character Header Bar (Badge & Prompt on left; Mic status & Costumes button on right) */}
+      {/* Tier 1: costume badge, replay speaker, mic status, back to costumes (icons only) */}
       <div className="w-full flex items-center justify-between gap-2 px-1">
-        {/* Left: Interactive Character Badge & Prompt indicator */}
-        <button
-          id="character-badge-btn"
-          onClick={() => {
-            hapticGentleTick();
-            onCharacterBadgeClick?.();
-          }}
-          className="cursor-pointer flex items-center gap-2 p-1 sm:p-1.5 rounded-2xl hover:bg-slate-100 active:scale-95 transition-all text-left group shrink-0"
-          title={`Click to hear about ${character.name}!`}
-        >
-          <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">
-            {character.iconEmoji}
-          </span>
-          <div className="flex flex-col">
-            <span
-              className="text-xs sm:text-sm font-black uppercase tracking-wide leading-tight"
-              style={{ color: character.primaryColor }}
-            >
-              {character.name}
-            </span>
-            <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-800 flex items-center gap-1">
-              <span>🔊</span>
-              <span>
-                {isCostumeRepeating
-                  ? `Say "${character.name}"!`
-                  : isActionRepeating
-                  ? `Say "${activeAction?.targetWord}"!`
-                  : 'Press a picture'}
-              </span>
-            </span>
-          </div>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            id="character-badge-btn"
+            onClick={() => {
+              hapticGentleTick();
+              onCharacterBadgeClick?.();
+            }}
+            aria-label={character.name}
+            className="cursor-pointer rounded-2xl hover:bg-slate-100 active:scale-95 transition-all shrink-0"
+          >
+            <CostumeThumb id={character.id} size={52} />
+          </button>
+          <ReplayButton onClick={onReplay} />
+        </div>
 
-        {/* Right: Inline Mic Status (shows when listening or speaking) & Costumes switch button */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {(isListening || isSpeaking) && (
+          {micAvailable && (isListening || isSpeaking) && (
             <ListeningIndicator
               compact
               isListening={isListening}
@@ -109,11 +96,13 @@ export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
             <button
               id="hud-show-cards-btn"
               onClick={onShowCards}
-              className="cursor-pointer bg-amber-50 hover:bg-amber-100 active:scale-95 border-2 border-amber-300 text-amber-950 text-xs font-black px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl flex items-center gap-1 shadow-sm transition-transform"
-              title="Change costume"
+              aria-label="Costumes"
+              className="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-b-4 border-amber-300 text-amber-950 w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm active:translate-y-0.5 active:border-b-2 transition-transform"
             >
-              <span className="text-base sm:text-lg">🎭</span>
-              <span className="hidden sm:inline">Costumes</span>
+              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor" aria-hidden="true">
+                <rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="8" rx="2" />
+                <rect x="3" y="13" width="8" height="8" rx="2" /><rect x="13" y="13" width="8" height="8" rx="2" />
+              </svg>
             </button>
           )}
         </div>
@@ -126,22 +115,21 @@ export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
           <div className="w-full">
             <button
               id="costume-repeat-btn"
+              aria-label={`Say ${character.name}`}
               onClick={() => {
                 hapticActionPress();
                 onRepeatTap();
               }}
-              className={`w-full cursor-pointer text-white text-xs sm:text-sm font-black py-2.5 px-3 rounded-2xl shadow-md border-2 border-white flex items-center justify-center gap-2 active:scale-95 transition-transform animate-pulse ${
+              className={`w-full cursor-pointer text-white text-xs sm:text-sm font-black py-2.5 px-3 rounded-2xl shadow-md border-2 border-white flex items-center justify-center gap-2 active:scale-95 transition-transform ${
                 repeatStage === 2
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'
                   : 'bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600'
               }`}
             >
-              <span className="text-base">🎤</span>
-              <span>
-                {repeatStage === 2
-                  ? `Say "${character.name}" one more time!`
-                  : `Say "${character.name}"!`}
-              </span>
+              <svg viewBox="0 0 24 24" className="w-7 h-7" fill="currentColor" aria-hidden="true">
+                <rect x="9" y="3" width="6" height="11" rx="3" />
+                <path d="M6 11a6 6 0 0 0 12 0M12 17v4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              </svg>
             </button>
           </div>
         ) : (
@@ -164,40 +152,19 @@ export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
                       onActionClick(action);
                     }
                   }}
-                  className={`cursor-pointer w-full py-2 px-2 sm:py-2.5 sm:px-3 rounded-2xl flex items-center justify-center gap-1.5 sm:gap-2 border-2 transition-all duration-200 active:scale-95 shadow-xs font-black text-xs sm:text-sm text-center ${
+                  className={`cursor-pointer w-full py-3 px-2 sm:py-4 sm:px-3 rounded-2xl border-b-4 flex items-center justify-center gap-1.5 sm:gap-2 border-2 transition-all duration-200 active:scale-95 shadow-xs font-black text-xs sm:text-sm text-center ${
                     isCelebratedThis
                       ? 'bg-amber-300 border-amber-500 text-amber-950 ring-3 ring-amber-400 scale-[1.02]'
                       : isRepeatingThis
-                      ? 'bg-emerald-100 border-emerald-500 text-emerald-950 ring-3 ring-emerald-400 scale-[1.02] animate-pulse'
+                      ? 'bg-emerald-100 border-emerald-500 text-emerald-950 ring-3 ring-emerald-400 scale-[1.02]'
                       : isActive
                       ? 'bg-amber-200 border-amber-400 text-amber-950'
                       : 'bg-amber-50 hover:bg-amber-100 hover:border-amber-400 border-amber-300 text-slate-900'
                   }`}
-                  title={`Click: ${action.actionTitle}`}
+                  aria-label={action.targetWord}
                 >
-                  <span className="text-xl sm:text-2xl shrink-0">{action.emoji}</span>
-                  <span className="truncate">
-                    {isRepeatingThis ? (
-                      <span className="flex items-center justify-center gap-1 text-emerald-950">
-                        <span>🗣️</span>
-                        <span>
-                          {actionRepeatStage === 2
-                            ? `Say "${action.targetWord}" one more time!`
-                            : `Say "${action.targetWord}"!`}
-                        </span>
-                      </span>
-                    ) : isCelebratedThis ? (
-                      <span className="flex items-center justify-center gap-1 text-amber-950">
-                        <span>⭐</span>
-                        <span>Well done!</span>
-                      </span>
-                    ) : (
-                      action.actionTitle
-                    )}
-                  </span>
-                  {isActive && actionPromptState === 'prompting' && (
-                    <span className="text-xs animate-bounce shrink-0">🔊</span>
-                  )}
+                  {/* Picture only (placeholder art until the flat illustrations are drawn) */}
+                  <span className="text-4xl sm:text-5xl leading-none" aria-hidden="true">{action.emoji}</span>
                 </button>
               );
             })}
