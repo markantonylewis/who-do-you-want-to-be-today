@@ -18,16 +18,22 @@ Keep the current look. Only remove text or emoji where a rule requires it.
 - If the camera is off, denied or fails, the child gets the cartoon face. Nothing is shown to the child.
 - Narrator errors already fall back to the device voice. That stays.
 
-## 3. Stars for words
+## 3. Stars for trying words
 - The star is no longer given for picking a costume.
-- Mic on: a star when the word is clear or a good try. "Not yet" gets no star.
-- Mic off: the picture word is spoken, then the child taps a picture to answer (see Decisions). A star is given for the correct picture.
-- The session limit still counts costume rounds. Stars are a separate count (see Decisions).
+- The voice mechanic stays exactly as it is now: not right on the 1st go → "Well done" → second go; not right on the 2nd go → "Well done" → move on; right on either go → "Perfect" → move on.
+- Mic on: a star for any genuine try (clear, good try or not yet). Silence on both goes earns no star.
+- Mic off (tap mode): the narrator says "Press the fire engine!" and the child taps one of the 3–4 pictures. The correct picture earns a star. The mic-on flow (child picks a picture, then says it) is unchanged.
+- Top bar shows only earned stars as icons, with no digits. The session limit keeps counting costume rounds in the background.
 
 ## 4. Word-attempt tracking
-- Each attempt is saved as: word, costume, said or tapped, result (clear / good try / not yet), timestamp. It's stored on this device only and no audio is kept.
-- The existing Progress report keeps working: old entries map perfect → clear and needs-practice → not yet.
-- Saving now happens whether or not premium is on (stored data only). The report itself stays premium.
+- Each attempt is saved as: word, costume, said or tapped, result, timestamp. It's stored on this device only and no audio is kept.
+- Results (for the parent log only; the child never hears them):
+  - clear: perfect on the 1st go
+  - good try: perfect on the 2nd go, or a close near-miss
+  - not yet: tried but didn't get it
+  - didn't try: silent on both goes
+- Attempts are saved for free users too. The report stays premium.
+- The existing Progress report keeps working: old entries map perfect → clear and needs-practice → not yet. Wording stays honest ("practising", "getting clearer").
 
 ## 5. No text or upsells on child screens
 - Costume cards: artwork only, no name, with an aria-label.
