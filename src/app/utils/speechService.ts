@@ -686,6 +686,21 @@ export class ToddlerSpeechRecognizer {
   private onActionMatchCallback: ((quality: 'perfect' | 'needs-practice') => void) | null = null;
   private targetWord: string = '';
   private onSpeechDetectedCallback: (() => void) | null = null;
+  /** True once the browser has permanently refused the mic (or has no recognizer). */
+  public unavailable = false;
+  /** Called once when the mic becomes unavailable, so the app can switch to tap mode. */
+  public onUnavailable: (() => void) | null = null;
+  /** True if any speech was heard since the last listener started. */
+  public heardSpeech = false;
+
+  private markUnavailable() {
+    if (this.unavailable) return;
+    this.unavailable = true;
+    this.isListening = false;
+    try { this.recognition?.abort?.(); } catch { /* ignore */ }
+    const cb = this.onUnavailable;
+    if (cb) cb();
+  }
 
   constructor() {
     const SpeechRecognition =
@@ -705,6 +720,7 @@ export class ToddlerSpeechRecognizer {
           transcript += event.results[i][0].transcript;
         }
 
+        if (transcript.trim().length > 0) this.heardSpeech = true;
         if (this.onSpeechDetectedCallback && transcript.trim().length > 0) {
           this.onSpeechDetectedCallback();
         }
@@ -774,13 +790,18 @@ export class ToddlerSpeechRecognizer {
       };
 
       this.recognition.onerror = (e: any) => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
+          // Permanent refusal: stop for good instead of restarting forever.
+          this.markUnavailable();
+          return;
+        }
         if (e.error !== 'no-speech' && e.error !== 'aborted') {
           console.warn('Speech recognition error:', e.error);
         }
       };
 
       this.recognition.onend = () => {
-        if (this.isListening) {
+        if (this.isListening && !this.unavailable) {
           try {
             this.recognition.start();
           } catch {
@@ -788,6 +809,8 @@ export class ToddlerSpeechRecognizer {
           }
         }
       };
+    } else {
+      this.unavailable = true;
     }
   }
 
@@ -799,6 +822,7 @@ export class ToddlerSpeechRecognizer {
     this.onActionMatchCallback = null;
     this.targetWord = '';
     this.onSpeechDetectedCallback = onSpeechDetected || null;
+    if (this.unavailable) return;
     this.isListening = true;
 
     if (this.recognition) {
@@ -819,6 +843,8 @@ export class ToddlerSpeechRecognizer {
     this.onActionMatchCallback = onMatch;
     this.onResultCallback = null;
     this.onSpeechDetectedCallback = onSpeechDetected || null;
+    this.heardSpeech = false;
+    if (this.unavailable) return;
     this.isListening = true;
 
     if (this.recognition) {
