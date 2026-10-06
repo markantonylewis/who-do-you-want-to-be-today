@@ -25,7 +25,8 @@ export const ListeningIndicator: React.FC<ListeningIndicatorProps> = ({
       id="voice-listening-indicator"
       onClick={onClick}
       className="relative flex items-center justify-center cursor-pointer select-none shrink-0"
-      title={isSpeaking ? 'Speaking...' : isListening ? 'Listening... Tap to talk' : 'Tap to talk'}
+      role="button"
+      aria-label={isSpeaking ? 'Speaking' : isListening ? 'Listening' : 'Talk'}
     >
       {/* Outer pulsing ripples when listening */}
       {isListening && (
@@ -71,9 +72,11 @@ export const ListeningIndicator: React.FC<ListeningIndicatorProps> = ({
             : 'bg-white hover:bg-amber-50 border-amber-300 text-amber-900'
         }`}
       >
-        <span>
-          {isSpeaking ? '🗣️' : isListening ? '👂' : '🎤'}
-        </span>
+        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor" aria-hidden="true">
+          <rect x="9" y="3" width="6" height="11" rx="3" />
+          <path d="M6 11a6 6 0 0 0 12 0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M12 17v4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+        </svg>
 
         {/* Dynamic sound wave bars */}
         {isListening && !compact && (
