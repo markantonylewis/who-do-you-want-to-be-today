@@ -17,9 +17,12 @@ export interface ParentSettings {
   preferredVoiceURI: string;
   wrapUpRoutine: 'standard' | 'bedtime' | 'cleanup';
   premiumUnlocked: boolean; // TEMP: testing switch until real purchases are wired up
-  trackProgress: boolean; // premium: save word attempts on this device for the progress report
+  trackProgress: boolean; // save word attempts on this device for the progress report
   reportPeriod: 'session' | 'week' | 'month' | 'all';
   knownCharacterIds: CharacterId[];
+  setupComplete: boolean; // one-time parent setup has been finished
+  cameraEnabled: boolean; // parent allowed the camera in setup
+  micEnabled: boolean; // parent allowed the microphone in setup
 }
 
 export const ALL_CHARACTER_IDS: CharacterId[] = [
@@ -53,6 +56,9 @@ export const DEFAULT_PARENT_SETTINGS: ParentSettings = {
   trackProgress: true,
   reportPeriod: 'week',
   knownCharacterIds: [...ALL_CHARACTER_IDS],
+  setupComplete: false,
+  cameraEnabled: false,
+  micEnabled: false,
 };
 
 const STORAGE_KEY = 'toddler_costume_parent_settings_v1';
