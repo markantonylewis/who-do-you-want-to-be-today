@@ -451,7 +451,7 @@ export const CHARACTERS: CharacterItem[] = [
     nearMisses: [
       'star', 'stars', 'twinkle', 'twinkle star', 'sky', 'sun', 'bright', 'yellow star', 'little star',
       'shooting star', 'starlight', 'twinkle twinkle', 'shine', 'night sky', 'tar', 'car', 'sta', 'ta', 'stah',
-      'twinko', 'tinkle', 'stare', 'stari', 'starry', 'sparkle', 'are'
+      'twinko', 'tinkle', 'stare', 'stari', 'starry', 'sparkle'
     ],
   },
   ...PREMIUM_CHARACTERS,
