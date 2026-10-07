@@ -63,11 +63,18 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
             <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? 'bg-amber-500' : 'bg-amber-200'}`} />
           ))}
         </div>
+        <h1 className="text-3xl font-black leading-tight">Who Am I Today?</h1>
+        <p className="text-base">
+          A costume game where your toddler practises saying words out loud: hear a word, find the picture, say it back.
+        </p>
+        <p className="text-sm text-slate-700">
+          Free to play, with no ads. Nothing your child says is ever recorded.
+        </p>
         <p className="text-xs font-black uppercase tracking-wider text-amber-800">Grown-up setup</p>
 
         {step === 'camera' && (
           <>
-            <h1 className="text-2xl font-black">Use the camera?</h1>
+            <h2 className="text-2xl font-black">Use the camera?</h2>
             <p className="text-base">The costume is drawn on your child's face, like a filter.</p>
             {embedded && (
               <p className="text-sm bg-sky-50 border border-sky-200 rounded-xl p-3">
@@ -79,7 +86,7 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
 
         {step === 'mic' && (
           <>
-            <h1 className="text-2xl font-black">Use the microphone?</h1>
+            <h2 className="text-2xl font-black">Use the microphone?</h2>
             <p className="text-base">Your child says the words out loud. Without it, they tap the right picture instead.</p>
             <p className="text-sm text-slate-600">Speech is checked as it happens and never recorded.</p>
           </>
@@ -87,7 +94,7 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
 
         {step === 'name' && (
           <>
-            <h1 className="text-2xl font-black">Child's name</h1>
+            <h2 className="text-2xl font-black">Child's name</h2>
             <p className="text-base">Optional. Used only in your progress report.</p>
             <input
               id="setup-child-name"
