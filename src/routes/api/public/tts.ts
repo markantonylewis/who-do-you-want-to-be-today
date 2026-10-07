@@ -11,6 +11,33 @@ const VOICES: Record<string, string> = {
 
 const Body = z.object({ text: z.string().min(1).max(600), voice: z.string().max(20) });
 
+type Alignment = {
+  characters: string[];
+  character_start_times_seconds: number[];
+  character_end_times_seconds: number[];
+};
+
+// Turn per-character timings into per-word timings (used by the echo guard).
+function toWords(a: Alignment | undefined) {
+  const out: { word: string; start: number; end: number }[] = [];
+  if (!a?.characters) return out;
+  let cur = "";
+  let s = 0;
+  let e = 0;
+  a.characters.forEach((ch, i) => {
+    if (/\s/.test(ch)) {
+      if (cur) out.push({ word: cur, start: s, end: e });
+      cur = "";
+    } else {
+      if (!cur) s = a.character_start_times_seconds[i] ?? 0;
+      cur += ch;
+      e = a.character_end_times_seconds[i] ?? s;
+    }
+  });
+  if (cur) out.push({ word: cur, start: s, end: e });
+  return out;
+}
+
 export const Route = createFileRoute("/api/public/tts")({
   server: {
     handlers: {
@@ -21,7 +48,7 @@ export const Route = createFileRoute("/api/public/tts")({
         if (!parsed.success) return new Response("Bad request", { status: 400 });
         const voiceId = VOICES[parsed.data.voice] ?? VOICES["us_woman"];
         const res = await fetch(
-          `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
+          `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/with-timestamps?output_format=mp3_44100_128`,
           {
             method: "POST",
             headers: { "xi-api-key": key, "Content-Type": "application/json" },
@@ -37,9 +64,11 @@ export const Route = createFileRoute("/api/public/tts")({
           console.error(`ElevenLabs TTS failed [${res.status}]: ${err}`);
           return new Response(err, { status: res.status });
         }
-        return new Response(res.body, {
-          headers: { "Content-Type": "audio/mpeg", "Cache-Control": "public, max-age=86400" },
-        });
+        const data = (await res.json()) as { audio_base64: string; alignment?: Alignment };
+        return Response.json(
+          { audio: data.audio_base64, words: toWords(data.alignment) },
+          { headers: { "Cache-Control": "public, max-age=86400" } },
+        );
       },
     },
   },
