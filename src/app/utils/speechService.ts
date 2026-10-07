@@ -622,6 +622,7 @@ export interface SpeakOptions {
   rate?: number;
   pitch?: number;
   skipServerTTS?: boolean;
+  guardWords?: string[];
 }
 
 // Play speech through Gemini TTS if server is available, otherwise top-tier Google Web Speech API
