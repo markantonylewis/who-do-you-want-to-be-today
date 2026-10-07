@@ -201,17 +201,18 @@ export function drawPremiumCostume(ctx: Ctx, characterId: CharacterId, s: number
       return true;
     case 'penguin':
       // Black cap and outer cheeks, white face patch around the eyes and cheeks, orange beak.
+      ellipse(ctx, -s * 0.58, s * 0.28, s * 0.13, s * 0.26, '#1f2937');
+      ellipse(ctx, s * 0.58, s * 0.28, s * 0.13, s * 0.26, '#1f2937');
       foreheadCap(ctx, s, '#1f2937');
       shape(ctx, '#ffffff', () => {
-        ctx.moveTo(-s * 0.5, -s * 0.02);
-        ctx.quadraticCurveTo(-s * 0.25, -s * 0.22, 0, -s * 0.08);
-        ctx.quadraticCurveTo(s * 0.25, -s * 0.22, s * 0.5, -s * 0.02);
-        ctx.quadraticCurveTo(0, -s * 0.12, -s * 0.5, -s * 0.02);
+        ctx.moveTo(-s * 0.48, -s * 0.03);
+        ctx.quadraticCurveTo(-s * 0.36, -s * 0.44, -s * 0.16, -s * 0.38);
+        ctx.quadraticCurveTo(-s * 0.04, -s * 0.34, 0, -s * 0.22);
+        ctx.quadraticCurveTo(s * 0.04, -s * 0.34, s * 0.16, -s * 0.38);
+        ctx.quadraticCurveTo(s * 0.36, -s * 0.44, s * 0.48, -s * 0.03);
+        ctx.quadraticCurveTo(0, -s * 0.2, -s * 0.48, -s * 0.03);
       });
-      ellipse(ctx, -s * 0.5, s * 0.3, s * 0.17, s * 0.3, '#1f2937');
-      ellipse(ctx, s * 0.5, s * 0.3, s * 0.17, s * 0.3, '#1f2937');
-      ellipse(ctx, -s * 0.44, s * 0.3, s * 0.09, s * 0.2, '#ffffff', null);
-      ellipse(ctx, s * 0.44, s * 0.3, s * 0.09, s * 0.2, '#ffffff', null);
+      cheeks(ctx, s, '#ffffff');
       path(ctx, [[-s * 0.06, s * 0.27], [s * 0.06, s * 0.27], [0, s * 0.35]], '#f59e0b');
       return true;
     case 'owl':
