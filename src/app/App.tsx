@@ -770,6 +770,7 @@ export default function App() {
                   }}
                   onCharacterBadgeClick={handleCharacterBadgeClick}
                   onShowCards={openTray}
+                  trayThumbs={availableCharacters.filter((c) => c.id !== currentCharacter.id).slice(0, 3).map((c) => c.id)}
                 />
               </motion.div>
             ) : null}
