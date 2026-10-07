@@ -5,6 +5,12 @@
 - [x] Verify the six accessories on the review page and in the game at desktop and phone sizes
 - [x] Correct the missing costume-button thumbnail input discovered during game verification
 
+## Setup screen copy trim
+- [x] Remove the two intro lines from the camera and microphone pages; microphone page unchanged otherwise
+- [x] Keep the two lines on the final "Child's name" page (owner to confirm; say the word to drop them there too)
+- [x] Route meta description still carries the same wording for search engines
+
+
 ## Migrate "Who Am I Today?" from AI Studio (in progress)
 
 Source: AI Studio app — voice-first costume dress-up + vocabulary adventure for toddlers.

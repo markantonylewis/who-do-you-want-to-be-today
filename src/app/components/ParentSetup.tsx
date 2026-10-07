@@ -64,12 +64,16 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
           ))}
         </div>
         <h1 className="text-3xl font-black leading-tight">Who Am I Today?</h1>
-        <p className="text-base">
-          A costume game where your toddler practises saying words out loud. Helps diction and vocabulary.
-        </p>
-        <p className="text-sm text-slate-700">
-          Free to play with no ads. Nothing your child says is ever recorded.
-        </p>
+        {step === 'name' && (
+          <>
+            <p className="text-base">
+              A costume game where your toddler practises saying words out loud. Helps diction and vocabulary.
+            </p>
+            <p className="text-sm text-slate-700">
+              Free to play with no ads. Nothing your child says is ever recorded.
+            </p>
+          </>
+        )}
         <p className="text-xs font-black uppercase tracking-wider text-amber-800">Grown-up setup</p>
 
         {step === 'camera' && (
