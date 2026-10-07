@@ -1,7 +1,7 @@
 // @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import React from 'react';
 import { motion } from 'motion/react';
-import { CharacterItem, CharacterAction } from '../types';
+import { CharacterItem, CharacterAction, CharacterId } from '../types';
 import { ListeningIndicator } from './ListeningIndicator';
 import { CostumeThumb } from './CostumeThumb';
 import { ReplayButton } from './ReplayButton';
@@ -27,6 +27,7 @@ interface VocabularyBannerProps {
   onCharacterBadgeClick?: () => void;
   onReplay?: () => void;
   micAvailable?: boolean;
+  trayThumbs?: CharacterId[];
 }
 
 export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
@@ -45,6 +46,7 @@ export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
   onCharacterBadgeClick,
   onReplay,
   micAvailable = true,
+  trayThumbs = [],
 }) => {
   const isActionRepeating = Boolean(activeAction && actionPromptState === 'repeating');
   const isCostumeRepeating = stage === 'repeat' && !activeAction;
