@@ -68,7 +68,7 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
         {step === 'camera' && (
           <>
             <h1 className="text-2xl font-black">Use the camera?</h1>
-            <p className="text-base">The costume is drawn on your child's face, like a filter. Without it, a cartoon face wears the costume.</p>
+            <p className="text-base">The costume is drawn on your child's face, like a filter.</p>
             {embedded && (
               <p className="text-sm bg-sky-50 border border-sky-200 rounded-xl p-3">
                 This preview can't use the camera. Open the app in a new tab to allow it.
