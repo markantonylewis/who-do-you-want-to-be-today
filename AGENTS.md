@@ -15,3 +15,4 @@
 - Word attempts are logged through `logAttempt` in `App.tsx` into `progressStore` (results only, never audio), so the parent report has one source of truth.
 - Every narrator line, listener and timer in the game loop belongs to a round id (`roundRef` in `App.tsx`); switching costume, opening the tray or restarting bumps it via `cancelRound()`, so stale callbacks from an abandoned costume can never fire.
 - Word/costume listeners start with the narrator's prompt (barge-in) and `utils/echoGuard.ts` filters the narrator's own words using word timings cached with each phrase; the no-answer timeout only starts when the prompt ends.
+- The app's single descriptive `h1` and its parent-facing blurb live in `ParentSetup` (the first parent screen, and the only crawlable first view); step questions are `h2`s, and child-facing screens stay word-free, so the heading never moves there.
