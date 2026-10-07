@@ -78,7 +78,6 @@ export default function App() {
 
   const recognizerRef = useRef<ToddlerSpeechRecognizer | null>(null);
   const sessionTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasWelcomedRef = useRef<boolean>(false);
   const lastLineRef = useRef<string>('');
   const triedRef = useRef<boolean>(false); // any speech heard during this word's two goes
@@ -91,11 +90,7 @@ export default function App() {
 
   // Pause speech & recognition while parent screens are open
   useEffect(() => {
-    if (isParentScreenActive) {
-      stopAnySpeech();
-      if (recognizerRef.current) recognizerRef.current.stop();
-      setIsListening(false);
-    }
+    if (isParentScreenActive) cancelRound();
   }, [isParentScreenActive]);
 
   // Only unlocked, parent-enabled costumes are ever shown to the child.
@@ -131,7 +126,7 @@ export default function App() {
       rec.stop();
       stopAnySpeech();
       if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
-      if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
+      timersRef.current.forEach((t) => clearTimeout(t));
     };
   }, []);
 
@@ -713,10 +708,9 @@ export default function App() {
                 key="character-cards-deck"
                 selectedCharacterId={selectedCharacterId}
                 characters={availableCharacters}
-                onSelect={handleSelectCharacter}
-                disabled={appState === 'vocab_intro' || appState === 'vocab_repeat'}
+                onSelect={handleTrayPick}
                 showCloseButton={Boolean(currentCharacter)}
-                onClose={() => setShowCharacterCards(false)}
+                onClose={closeTray}
                 isListening={isListening}
                 isSpeaking={isSpeaking}
                 micAvailable={micOn}
@@ -775,7 +769,7 @@ export default function App() {
                     }
                   }}
                   onCharacterBadgeClick={handleCharacterBadgeClick}
-                  onShowCards={() => setShowCharacterCards(true)}
+                  onShowCards={openTray}
                 />
               </motion.div>
             ) : null}
