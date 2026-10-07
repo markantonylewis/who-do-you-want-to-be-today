@@ -25,7 +25,7 @@ function CostumePreview() {
     <main className="min-h-screen bg-amber-50 p-6">
       <h1 className="text-2xl font-black text-amber-950">All costumes ({CHARACTERS.length})</h1>
       <p className="mb-6 text-sm font-semibold text-amber-800">
-        Grown-up check page. Eyes and mouth should be clear on every costume.
+        Grown-up check page. Glasses and superhero eye holes are see-through; the pirate patch, clown nose and elephant trunk are approved face accessories.
       </p>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
         {CHARACTERS.map((c) => (

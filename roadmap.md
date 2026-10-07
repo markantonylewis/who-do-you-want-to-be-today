@@ -1,5 +1,10 @@
 # Roadmap
 
+## Restore character-defining accessories
+- [x] Restore owl/teacher glasses, pirate patch, superhero mask, large clown nose and hanging elephant trunk
+- [x] Verify the six accessories on the review page and in the game at desktop and phone sizes
+- [x] Correct the missing costume-button thumbnail input discovered during game verification
+
 ## Migrate "Who Am I Today?" from AI Studio (in progress)
 
 Source: AI Studio app — voice-first costume dress-up + vocabulary adventure for toddlers.
