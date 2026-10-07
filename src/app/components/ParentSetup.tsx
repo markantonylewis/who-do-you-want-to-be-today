@@ -59,23 +59,11 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
     >
       <div className="flex-1 overflow-y-auto px-6 pt-10 pb-4 max-w-md w-full mx-auto flex flex-col gap-4">
         <div className="flex gap-1.5" aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2].map((i) => (
             <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? 'bg-amber-500' : 'bg-amber-200'}`} />
           ))}
         </div>
         <p className="text-xs font-black uppercase tracking-wider text-amber-800">Grown-up setup</p>
-
-        {step === 'welcome' && (
-          <>
-            <h1 className="text-2xl font-black">Set up in a few taps</h1>
-            <p className="text-base">
-              Your child plays alone with voice and pictures. First, decide whether the game can use the camera and microphone.
-            </p>
-            <p className="text-sm bg-white/80 border border-amber-200 rounded-xl p-3">
-              No recordings of your child are ever kept. Only results, such as which words were tried, are saved on this device.
-            </p>
-          </>
-        )}
 
         {step === 'camera' && (
           <>
