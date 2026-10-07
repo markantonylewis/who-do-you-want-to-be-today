@@ -3,14 +3,14 @@ import { saveParentSettings, getParentSettings } from '../utils/parentSettings';
 import { requestCamera, requestMic, isInIframe, hasSpeechRecognition } from '../utils/permissions';
 import { primeNarratorAudio } from '../utils/speechService';
 
-type Step = 'welcome' | 'camera' | 'mic' | 'name';
+type Step = 'camera' | 'mic' | 'name';
 
 /**
  * One-time grown-up setup, shown before the first game.
  * Big buttons sit at the bottom so it works one-handed in well under 30 seconds.
  */
 export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
-  const [step, setStep] = useState<Step>('welcome');
+  const [step, setStep] = useState<Step>('camera');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [name, setName] = useState(getParentSettings().childName || '');
@@ -46,7 +46,7 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
     onDone();
   };
 
-  const stepIndex = ['welcome', 'camera', 'mic', 'name'].indexOf(step);
+  const stepIndex = ['camera', 'mic', 'name'].indexOf(step);
   const primary =
     'w-full py-4 rounded-2xl bg-amber-500 border-b-[6px] border-amber-700 text-white font-black text-lg active:translate-y-1 active:border-b-2 transition-transform disabled:opacity-60';
   const secondary =
@@ -59,28 +59,16 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
     >
       <div className="flex-1 overflow-y-auto px-6 pt-10 pb-4 max-w-md w-full mx-auto flex flex-col gap-4">
         <div className="flex gap-1.5" aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2].map((i) => (
             <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? 'bg-amber-500' : 'bg-amber-200'}`} />
           ))}
         </div>
         <p className="text-xs font-black uppercase tracking-wider text-amber-800">Grown-up setup</p>
 
-        {step === 'welcome' && (
-          <>
-            <h1 className="text-2xl font-black">Set up in a few taps</h1>
-            <p className="text-base">
-              Your child plays alone with voice and pictures. First, decide whether the game can use the camera and microphone.
-            </p>
-            <p className="text-sm bg-white/80 border border-amber-200 rounded-xl p-3">
-              No recordings of your child are ever kept. Only results, such as which words were tried, are saved on this device.
-            </p>
-          </>
-        )}
-
         {step === 'camera' && (
           <>
             <h1 className="text-2xl font-black">Use the camera?</h1>
-            <p className="text-base">The costume is drawn on your child's face, like a filter. Without it, a cartoon face wears the costume.</p>
+            <p className="text-base">The costume is drawn on your child's face, like a filter.</p>
             {embedded && (
               <p className="text-sm bg-sky-50 border border-sky-200 rounded-xl p-3">
                 This preview can't use the camera. Open the app in a new tab to allow it.
@@ -116,11 +104,6 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       </div>
 
       <div className="px-6 pb-8 pt-2 max-w-md w-full mx-auto flex flex-col gap-2.5">
-        {step === 'welcome' && (
-          <button id="setup-continue" className={primary} onClick={() => { primeNarratorAudio(); setStep('camera'); }}>
-            Continue
-          </button>
-        )}
         {(step === 'camera' || step === 'mic') && (
           <>
             <button id={`setup-allow-${step}`} className={primary} disabled={busy} onClick={() => choose(step, true)}>
