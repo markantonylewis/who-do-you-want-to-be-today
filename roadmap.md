@@ -6,9 +6,10 @@
 - [x] Correct the missing costume-button thumbnail input discovered during game verification
 
 ## Setup screen copy trim
-- [x] Remove the two intro lines from the camera and microphone pages; microphone page unchanged otherwise
-- [x] Keep the two lines on the final "Child's name" page (owner to confirm; say the word to drop them there too)
+- [x] Two intro lines shown on the first step ("Use the camera?") only
+- [x] Dropped from the microphone step and the "Child's name" step; microphone page otherwise unchanged
 - [x] Route meta description still carries the same wording for search engines
+
 
 
 ## Migrate "Who Am I Today?" from AI Studio (in progress)
