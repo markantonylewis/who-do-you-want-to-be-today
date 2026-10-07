@@ -31,11 +31,49 @@ async function saveStoredTts(key: string, bytes: ArrayBuffer) {
     // storage full or unavailable — memory cache still works this session
   }
 }
+// Word timings for each phrase, kept on the device next to the audio.
+const TIMING_STORE = 'whoami-tts-times-v1';
+const timingCache = new Map<string, WordTiming[]>();
+async function readStoredTimings(key: string): Promise<WordTiming[] | null> {
+  try {
+    if (typeof caches === 'undefined') return null;
+    const cache = await caches.open(TIMING_STORE);
+    const hit = await cache.match(ttsStoreUrl(key));
+    return hit ? await hit.json() : null;
+  } catch {
+    return null;
+  }
+}
+async function saveStoredTimings(key: string, words: WordTiming[]) {
+  try {
+    if (typeof caches === 'undefined') return;
+    const cache = await caches.open(TIMING_STORE);
+    await cache.put(ttsStoreUrl(key), new Response(JSON.stringify(words), { headers: { 'Content-Type': 'application/json' } }));
+  } catch {
+    // ignore
+  }
+}
+function base64ToBytes(b64: string): ArrayBuffer {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out.buffer;
+}
 // Speech synthesis, speech recognition, and Gemini Live/TTS client for toddlers
 
 import { CHARACTERS, findCharacter } from '../data/characters';
 import { CharacterItem } from '../types';
 import { getCustomTrainedWords } from './toddlerVoiceTraining';
+import {
+  beginPrompt,
+  endPrompt,
+  setWordTimings,
+  markWordSpoken,
+  childTokens,
+  isPromptLive,
+  tokenize,
+  WordTiming,
+} from './echoGuard';
 
 let playbackAudioCtx: AudioContext | null = null;
 let currentSourceNode: AudioBufferSourceNode | null = null;
@@ -139,13 +177,28 @@ export function stopAnySpeech() {
     }
     currentSourceNode = null;
   }
+  // Drop any pending end callback, even if the audio is still loading.
+  narratorEndCb = null;
   if (narratorAudio && !narratorAudio.paused) {
-    narratorEndCb = null;
     try { narratorAudio.pause(); } catch { /* ignore */ }
   }
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
   }
+  endPrompt(performance.now());
+}
+
+// Costume names are always guarded words: the narrator saying them never picks a costume.
+let guardWordsCache: string[] | null = null;
+function defaultGuardWords(): string[] {
+  if (!guardWordsCache) {
+    guardWordsCache = [];
+    CHARACTERS.forEach((c) => {
+      guardWordsCache!.push(c.name);
+      if (c.pluralName) guardWordsCache!.push(c.pluralName);
+    });
+  }
+  return guardWordsCache;
 }
 
 // ----------------------------------------------------
@@ -590,25 +643,31 @@ export async function speakText(
   const targetVoiceId: CuratedVoiceId = parseVoiceId(rawId);
   const curatedVoice = CURATED_GOOGLE_VOICES.find((v) => v.id === targetVoiceId) || CURATED_GOOGLE_VOICES[0];
 
-  // Try Google Gemini server TTS first for lifelike warmth and emotional prosody
+  // Echo guard: from now until the line ends, the narrator's words never count.
+  beginPrompt(naturalText, [...defaultGuardWords(), ...(options?.guardWords || [])], performance.now());
+
+  // Natural voice (ElevenLabs) first
   if (SERVER_TTS_ENABLED && !options?.skipServerTTS) {
     try {
       const cacheKey = `${targetVoiceId}|${naturalText}`;
-      let bytes = ttsCache.get(cacheKey);
-      if (!bytes) {
-        bytes = (await readStoredTts(cacheKey)) || undefined;
-        if (!bytes) {
-          const response = await fetch('/api/public/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: naturalText, voice: targetVoiceId }),
-          });
-          if (!response.ok) throw new Error(`TTS ${response.status}`);
-          bytes = await response.arrayBuffer();
-          saveStoredTts(cacheKey, bytes);
-        }
-        ttsCache.set(cacheKey, bytes);
+      let bytes = ttsCache.get(cacheKey) || (await readStoredTts(cacheKey)) || undefined;
+      let words = timingCache.get(cacheKey) || (await readStoredTimings(cacheKey)) || undefined;
+      if (!bytes || !words) {
+        // One fetch per phrase per voice; audio and word timings are then kept on the device.
+        const response = await fetch('/api/public/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: naturalText, voice: targetVoiceId }),
+        });
+        if (!response.ok) throw new Error(`TTS ${response.status}`);
+        const data = await response.json();
+        bytes = base64ToBytes(data.audio);
+        words = Array.isArray(data.words) ? data.words : [];
+        saveStoredTts(cacheKey, bytes);
+        saveStoredTimings(cacheKey, words);
       }
+      ttsCache.set(cacheKey, bytes);
+      timingCache.set(cacheKey, words);
       let url = blobUrlCache.get(cacheKey);
       if (!url) {
         url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
@@ -617,13 +676,20 @@ export async function speakText(
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
       const audio = getNarratorAudio();
       let done = false;
+      let timed = false;
       const finish = () => {
         if (done) return;
         done = true;
         if (narratorEndCb === finish) narratorEndCb = null;
+        endPrompt(performance.now());
         if (onEnd) onEnd();
       };
       narratorEndCb = finish;
+      audio.onplaying = () => {
+        if (timed || narratorEndCb !== finish) return;
+        timed = true;
+        if (words && words.length) setWordTimings(words, performance.now() - (audio.currentTime || 0) * 1000);
+      };
       audio.onended = () => { if (narratorEndCb === finish) finish(); };
       audio.onerror = () => { if (narratorEndCb === finish) finish(); };
       audio.src = url;
@@ -658,6 +724,7 @@ export async function speakText(
     const safeEnd = () => {
       if (finished) return;
       finished = true;
+      endPrompt(performance.now());
       if (onEnd) onEnd();
     };
 
@@ -665,6 +732,12 @@ export async function speakText(
     utterance.onerror = (e) => {
       console.warn('Speech synthesis utterance ended with error:', e);
       safeEnd();
+    };
+    // Word events feed the echo guard (device voice has no timestamps).
+    utterance.onboundary = (e: any) => {
+      if (e.name && e.name !== 'word') return;
+      const w = (naturalText.slice(e.charIndex || 0).match(/^[\w'’]+/) || [''])[0];
+      if (w) markWordSpoken(w, performance.now(), chosenRate);
     };
 
     // Chromium garbage collection bug workaround: retain reference on window
@@ -720,19 +793,20 @@ export class ToddlerSpeechRecognizer {
           transcript += event.results[i][0].transcript;
         }
 
-        if (transcript.trim().length > 0) this.heardSpeech = true;
-        if (this.onSpeechDetectedCallback && transcript.trim().length > 0) {
-          this.onSpeechDetectedCallback();
-        }
+        // Echo guard: drop the narrator's own words picked up by the mic.
+        const now = performance.now();
+        const prompting = isPromptLive(now);
+        const tokens = childTokens(transcript, now);
+        if (tokens.length === 0) return;
+        const childText = tokens.join(' ');
+
+        this.heardSpeech = true;
+        if (this.onSpeechDetectedCallback) this.onSpeechDetectedCallback();
 
         // 1. If currently listening for an action repetition word (e.g. "fire engine", "digger")
         if (this.onActionMatchCallback && this.targetWord) {
-          const clean = transcript.toLowerCase().trim();
-          const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
-          const normalizedSpeech = normalize(clean);
-          const normalizedTarget = normalize(this.targetWord);
-          const targetTokens = normalizedTarget.split(' ').filter(Boolean);
-          const spokenTokens = normalizedSpeech.split(' ').filter(Boolean);
+          const targetTokens = tokenize(this.targetWord);
+          const spokenTokens = tokens;
           const stem = (w: string) => w.replace(/(es|s)$/, '');
           const joinedSpeech = spokenTokens.join('');
           const exactWords =
@@ -745,9 +819,9 @@ export class ToddlerSpeechRecognizer {
           // Many browsers report 0 confidence (esp. mobile / interim); treat that as unknown.
           const isPerfect = exactWords && (rawConfidence === 0 || rawConfidence >= 0.6);
 
-          // A confident exact match can move on at once. Less-clear speech waits for the
-          // recognizer's final result before requesting one more practice attempt.
-          if (isPerfect || (isFinal && normalizedSpeech.length > 0)) {
+          // A confident exact match can move on at once (even mid-prompt). Less-clear
+          // speech only counts as an attempt once the prompt has finished.
+          if (isPerfect || (isFinal && !prompting)) {
             const cb = this.onActionMatchCallback;
             this.onActionMatchCallback = null;
             cb(isPerfect ? 'perfect' : 'needs-practice');
@@ -759,32 +833,31 @@ export class ToddlerSpeechRecognizer {
         if (this.onResultCallback) {
           const customWords = getCustomTrainedWords();
           // Fast local fuzzy match with trained custom words prioritized
-          const localMatch = findCharacter(transcript, customWords);
+          const localMatch = findCharacter(childText, customWords);
           if (localMatch) {
-            this.onResultCallback(localMatch, transcript);
+            this.onResultCallback(localMatch, childText);
             return;
           }
+          // Unmatched talk during the prompt is not a miss: keep listening.
+          if (prompting) return;
 
           // If toddler said something not immediately matched, check server AI interpreter
-          if (transcript.trim().length >= 1) {
-            try {
-              const data = await interpretToddler({ data: { transcript, customWords } });
-              if (data.characterId) {
-                const char = CHARACTERS.find(c => c.id === data.characterId);
-                if (char && this.onResultCallback) {
-                  this.onResultCallback(char, transcript);
-                  return;
-                }
+          try {
+            const data = await interpretToddler({ data: { transcript: childText, customWords } });
+            if (data.characterId) {
+              const char = CHARACTERS.find(c => c.id === data.characterId);
+              if (char && this.onResultCallback) {
+                this.onResultCallback(char, childText);
+                return;
               }
-            } catch {
-              // Local match will suffice
             }
+          } catch {
+            // Local match will suffice
+          }
 
-            // Fallback if still listening and final
-            const isFinal = event.results[event.results.length - 1].isFinal;
-            if (isFinal && this.onResultCallback) {
-              this.onResultCallback(null, transcript);
-            }
+          const isFinal = event.results[event.results.length - 1].isFinal;
+          if (isFinal && this.onResultCallback) {
+            this.onResultCallback(null, childText);
           }
         }
       };
