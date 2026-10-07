@@ -6,7 +6,8 @@
 // Face safe zones (nothing may be drawn here, on camera or cartoon face):
 //   eyes:  |x| < 0.30s and 0.04s < y < 0.40s
 //   mouth: |x| < 0.20s and 0.37s < y < 0.85s
-// Only a small nose (|x| < 0.06s, 0.27s..0.35s) may sit between them.
+// Approved exceptions: transparent owl/teacher glasses, pirate patch,
+// open-eye superhero mask, large clown nose and hanging elephant trunk.
 // Headwear ends at y <= 0.02s; cheek pieces start at |x| >= 0.32s.
 import { CharacterId } from '../types';
 
@@ -130,6 +131,44 @@ function cross(ctx: Ctx, x: number, y: number, s: number, fill: string) {
   ], fill);
 }
 
+/** Unfilled round frames: the real or cartoon eyes remain visible through them. */
+function roundGlasses(ctx: Ctx, s: number) {
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = LW;
+  ctx.beginPath();
+  [-1, 1].forEach((side) => {
+    ctx.moveTo(side * s * 0.16 + s * 0.115, s * 0.2);
+    ctx.arc(side * s * 0.16, s * 0.2, s * 0.115, 0, Math.PI * 2);
+  });
+  ctx.stroke();
+  line(ctx, [[-s * 0.045, s * 0.2], [0, s * 0.175], [s * 0.045, s * 0.2]], OUTLINE, LW);
+  [-1, 1].forEach((side) => line(ctx, [[side * s * 0.275, s * 0.2], [side * s * 0.43, s * 0.15]], OUTLINE, LW));
+}
+
+/** Flat domino mask with genuinely transparent openings, not painted-on eyes. */
+function eyeMask(ctx: Ctx, s: number) {
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.39, s * 0.1);
+  ctx.quadraticCurveTo(-s * 0.2, s * 0.045, 0, s * 0.12);
+  ctx.quadraticCurveTo(s * 0.2, s * 0.045, s * 0.39, s * 0.1);
+  ctx.lineTo(s * 0.33, s * 0.29);
+  ctx.quadraticCurveTo(s * 0.16, s * 0.35, s * 0.06, s * 0.28);
+  ctx.lineTo(0, s * 0.34);
+  ctx.lineTo(-s * 0.06, s * 0.28);
+  ctx.quadraticCurveTo(-s * 0.16, s * 0.35, -s * 0.33, s * 0.29);
+  ctx.closePath();
+  [-1, 1].forEach((side) => {
+    ctx.moveTo(side * s * 0.16 + s * 0.105, s * 0.2);
+    ctx.ellipse(side * s * 0.16, s * 0.2, s * 0.105, s * 0.095, 0, 0, Math.PI * 2);
+    ctx.closePath();
+  });
+  ctx.fillStyle = '#2563eb';
+  ctx.fill('evenodd');
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = LW;
+  ctx.stroke();
+}
+
 export function sparklePair(ctx: Ctx, s: number, color: string) {
   star(ctx, -s * 0.6, -s * 0.5, s * 0.1, s * 0.04, color, 4);
   star(ctx, s * 0.6, -s * 0.32, s * 0.12, s * 0.045, color, 4);
@@ -186,18 +225,20 @@ export function drawPremiumCostume(ctx: Ctx, characterId: CharacterId, s: number
       nose(ctx, s, '#451a03');
       return true;
     case 'elephant':
-      // Big flat ears, forehead cap and a trunk raised high (clear of the mouth).
+      // Big flat ears and the owner-approved trunk hanging from the nose.
       ellipse(ctx, -s * 0.62, -s * 0.12, s * 0.24, s * 0.34, '#94a3b8');
       ellipse(ctx, s * 0.62, -s * 0.12, s * 0.24, s * 0.34, '#94a3b8');
       ellipse(ctx, -s * 0.62, -s * 0.12, s * 0.14, s * 0.22, '#f9a8d4', null);
       ellipse(ctx, s * 0.62, -s * 0.12, s * 0.14, s * 0.22, '#f9a8d4', null);
       foreheadCap(ctx, s, '#94a3b8');
       shape(ctx, '#94a3b8', () => {
-        ctx.moveTo(-s * 0.09, -s * 0.12);
-        ctx.quadraticCurveTo(-s * 0.12, -s * 0.6, s * 0.18, -s * 0.8);
-        ctx.quadraticCurveTo(s * 0.32, -s * 0.78, s * 0.26, -s * 0.66);
-        ctx.quadraticCurveTo(s * 0.06, -s * 0.55, s * 0.09, -s * 0.12);
+        ctx.moveTo(-s * 0.09, s * 0.27);
+        ctx.bezierCurveTo(-s * 0.12, s * 0.49, -s * 0.13, s * 0.76, s * 0.08, s * 0.81);
+        ctx.quadraticCurveTo(s * 0.29, s * 0.84, s * 0.28, s * 0.63);
+        ctx.quadraticCurveTo(s * 0.2, s * 0.57, s * 0.17, s * 0.67);
+        ctx.quadraticCurveTo(s * 0.07, s * 0.75, s * 0.09, s * 0.27);
       });
+      [0.4, 0.49, 0.58].forEach((y) => line(ctx, [[-s * 0.045, s * y], [s * 0.055, s * y]], OUTLINE, LW * 0.8));
       return true;
     case 'penguin':
       // Black cap and outer cheeks, white face patch around the eyes and cheeks, orange beak.
@@ -214,13 +255,14 @@ export function drawPremiumCostume(ctx: Ctx, characterId: CharacterId, s: number
       path(ctx, [[-s * 0.06, s * 0.27], [s * 0.06, s * 0.27], [0, s * 0.35]], '#f59e0b');
       return true;
     case 'owl':
-      // Feather tufts and brow, no glasses over the eyes.
+      // Feather tufts, brow and transparent round glasses.
       path(ctx, [[-s * 0.48, -s * 0.12], [-s * 0.6, -s * 0.7], [-s * 0.18, -s * 0.42]], '#78350f');
       path(ctx, [[s * 0.48, -s * 0.12], [s * 0.6, -s * 0.7], [s * 0.18, -s * 0.42]], '#78350f');
       foreheadCap(ctx, s, '#92400e');
       [-0.26, 0, 0.26].forEach((x) => path(ctx, [[s * (x - 0.08), -s * 0.3], [s * (x + 0.08), -s * 0.3], [s * x, -s * 0.2]], '#fcd34d', null));
       cheeks(ctx, s, '#fde68a');
       path(ctx, [[-s * 0.05, s * 0.27], [s * 0.05, s * 0.27], [0, s * 0.35]], '#f59e0b');
+      roundGlasses(ctx, s);
       return true;
     case 'frog':
       foreheadCap(ctx, s, '#22c55e');
@@ -253,21 +295,29 @@ export function drawPremiumCostume(ctx: Ctx, characterId: CharacterId, s: number
       cross(ctx, 0, -s * 0.36, s * 0.18, '#ef4444');
       return true;
     case 'teacher':
-      // Mortarboard with tassel, no glasses over the eyes.
+      // Mortarboard with tassel and transparent round glasses.
       headband(ctx, s, '#4c1d95');
       path(ctx, [[-s * 0.36, -s * 0.12], [-s * 0.36, -s * 0.38], [s * 0.36, -s * 0.38], [s * 0.36, -s * 0.12]], '#7c3aed');
       path(ctx, [[0, -s * 0.72], [s * 0.62, -s * 0.5], [0, -s * 0.3], [-s * 0.62, -s * 0.5]], '#7c3aed');
       line(ctx, [[0, -s * 0.5], [s * 0.5, -s * 0.44], [s * 0.52, -s * 0.18]], '#facc15', LW * 1.2);
       ellipse(ctx, s * 0.52, -s * 0.16, s * 0.05, s * 0.07, '#facc15');
+      roundGlasses(ctx, s);
       return true;
     case 'pirate':
-      // Pirate hat and bandana, no eye patch.
+      // Pirate hat, bandana and the owner-approved one-eye patch.
       headband(ctx, s, '#dc2626');
       path(ctx, [[-s * 0.6, -s * 0.16], [-s * 0.42, -s * 0.68], [0, -s * 0.94], [s * 0.42, -s * 0.68], [s * 0.6, -s * 0.16]], '#1f2937');
       ellipse(ctx, 0, -s * 0.55, s * 0.1, s * 0.09, '#f8fafc');
       line(ctx, [[-s * 0.14, -s * 0.36], [s * 0.14, -s * 0.24]], '#f8fafc', LW * 1.4);
       line(ctx, [[s * 0.14, -s * 0.36], [-s * 0.14, -s * 0.24]], '#f8fafc', LW * 1.4);
       path(ctx, [[s * 0.5, -s * 0.12], [s * 0.72, s * 0.04], [s * 0.6, -s * 0.18]], '#dc2626');
+      line(ctx, [[-s * 0.42, s * 0.035], [s * 0.16, s * 0.2], [s * 0.43, s * 0.27]], '#1f2937', LW * 1.4);
+      shape(ctx, '#1f2937', () => {
+        ctx.moveTo(s * 0.04, s * 0.105);
+        ctx.lineTo(s * 0.28, s * 0.105);
+        ctx.quadraticCurveTo(s * 0.3, s * 0.33, s * 0.16, s * 0.33);
+        ctx.quadraticCurveTo(s * 0.02, s * 0.32, s * 0.04, s * 0.105);
+      });
       return true;
     case 'astronaut':
       // Helmet ring around the face (open at the front), with antenna light.
@@ -304,7 +354,7 @@ export function drawPremiumCostume(ctx: Ctx, characterId: CharacterId, s: number
       sparklePair(ctx, s, '#fef08a');
       return true;
     case 'superhero':
-      // Cowl over the forehead only, with a big star; no mask over the eyes.
+      // Forehead cowl and star, with an open-eye mask below.
       shape(ctx, '#2563eb', () => {
         ctx.arc(0, 0, s * 0.57, Math.PI * 1.04, Math.PI * 1.96);
         ctx.lineTo(s * 0.55, s * 0.0);
@@ -313,6 +363,7 @@ export function drawPremiumCostume(ctx: Ctx, characterId: CharacterId, s: number
       star(ctx, 0, -s * 0.36, s * 0.17, s * 0.075, '#facc15');
       path(ctx, [[-s * 0.55, -s * 0.02], [-s * 0.78, s * 0.5], [-s * 0.52, s * 0.42]], '#ef4444');
       path(ctx, [[s * 0.55, -s * 0.02], [s * 0.78, s * 0.5], [s * 0.52, s * 0.42]], '#ef4444');
+      eyeMask(ctx, s);
       return true;
     case 'pilot':
       brimHat(ctx, s, '#f8fafc', '#1f2937', 'cap');
@@ -338,7 +389,7 @@ export function drawPremiumCostume(ctx: Ctx, characterId: CharacterId, s: number
       ['#38bdf8', '#facc15', '#f43f5e', '#4ade80', '#a855f7'].forEach((c, i) => {
         ellipse(ctx, (i - 2) * s * 0.23, -s * (0.42 + (i % 2) * 0.18), s * 0.2, s * 0.24, c);
       });
-      ellipse(ctx, 0, s * 0.31, s * 0.055, s * 0.05, '#ef4444');
+      ellipse(ctx, 0, s * 0.31, s * 0.13, s * 0.13, '#ef4444');
       cheeks(ctx, s, '#f9a8d4', null);
       return true;
     default:
