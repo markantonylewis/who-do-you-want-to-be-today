@@ -78,7 +78,6 @@ export default function App() {
 
   const recognizerRef = useRef<ToddlerSpeechRecognizer | null>(null);
   const sessionTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const loopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasWelcomedRef = useRef<boolean>(false);
   const lastLineRef = useRef<string>('');
   const triedRef = useRef<boolean>(false); // any speech heard during this word's two goes
@@ -91,11 +90,7 @@ export default function App() {
 
   // Pause speech & recognition while parent screens are open
   useEffect(() => {
-    if (isParentScreenActive) {
-      stopAnySpeech();
-      if (recognizerRef.current) recognizerRef.current.stop();
-      setIsListening(false);
-    }
+    if (isParentScreenActive) cancelRound();
   }, [isParentScreenActive]);
 
   // Only unlocked, parent-enabled costumes are ever shown to the child.
@@ -131,20 +126,58 @@ export default function App() {
       rec.stop();
       stopAnySpeech();
       if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
-      if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
+      timersRef.current.forEach((t) => clearTimeout(t));
     };
   }, []);
 
-  const speakWithState = useCallback(async (text: string, onDone?: () => void) => {
+  // ---------- Round control ----------
+  // Every voice line, listener and timer belongs to one round. Switching costume,
+  // opening the costume tray or restarting bumps the round, so nothing from the
+  // old round can fire afterwards.
+  const roundRef = useRef(0);
+  const speechSeqRef = useRef(0);
+  const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const resumeRef = useRef<(() => void) | null>(null); // replays the current stage after the tray closes
+  const trayPausedRef = useRef(false);
+
+  const clearTimers = () => {
+    timersRef.current.forEach((t) => clearTimeout(t));
+    timersRef.current.clear();
+  };
+  const later = (fn: () => void, ms: number) => {
+    const r = roundRef.current;
+    const id = setTimeout(() => {
+      timersRef.current.delete(id);
+      if (roundRef.current === r) fn();
+    }, ms);
+    timersRef.current.add(id);
+  };
+  const hush = () => {
+    speechSeqRef.current += 1;
+    stopAnySpeech();
+    setIsSpeaking(false);
+  };
+  const cancelRound = () => {
+    roundRef.current += 1;
+    hush();
+    clearTimers();
+    recognizerRef.current?.stop();
+    setIsListening(false);
+  };
+
+  const speakWithState = useCallback((text: string, onDone?: () => void, guardWords?: string[]) => {
     lastLineRef.current = text;
+    const seq = ++speechSeqRef.current;
+    const r = roundRef.current;
     setIsSpeaking(true);
-    await speakText(
+    speakText(
       text,
       () => {
+        if (speechSeqRef.current !== seq || roundRef.current !== r) return;
         setIsSpeaking(false);
         if (onDone) onDone();
       },
-      { voiceId: parentSettings.preferredVoiceURI, rate: parentSettings.voiceRate }
+      { voiceId: parentSettings.preferredVoiceURI, rate: parentSettings.voiceRate, guardWords }
     );
   }, [parentSettings.preferredVoiceURI, parentSettings.voiceRate]);
 
@@ -152,14 +185,15 @@ export default function App() {
   const handleReplay = useCallback(() => {
     if (isSpeaking || !lastLineRef.current) return;
     const line = lastLineRef.current;
+    const seq = ++speechSeqRef.current;
     setIsSpeaking(true);
-    speakText(line, () => setIsSpeaking(false), { voiceId: parentSettings.preferredVoiceURI, rate: parentSettings.voiceRate });
+    speakText(line, () => { if (speechSeqRef.current === seq) setIsSpeaking(false); }, { voiceId: parentSettings.preferredVoiceURI, rate: parentSettings.voiceRate });
   }, [isSpeaking, parentSettings.preferredVoiceURI, parentSettings.voiceRate]);
 
   const awardStar = useCallback(() => setStarsEarned((n) => n + 1), []);
 
   const stopListening = () => {
-    if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
+    clearTimers();
     if (recognizerRef.current) {
       if (recognizerRef.current.heardSpeech) triedRef.current = true;
       recognizerRef.current.stop();
@@ -167,10 +201,40 @@ export default function App() {
     setIsListening(false);
   };
 
+  // Barge-in: the listener starts with the prompt (the echo guard ignores the
+  // narrator's own voice). An early correct word stops the narrator. The 5.5 s
+  // "no answer" timer only starts when the prompt has finished.
+  const promptAndListen = (
+    text: string,
+    target: string,
+    onMatch: (q: 'perfect' | 'needs-practice') => void,
+    onTimeout: () => void,
+    onPromptEnd?: () => void,
+    onMicGone?: () => void
+  ) => {
+    const r = roundRef.current;
+    const rec = recognizerRef.current;
+    if (micOnRef.current && rec && !rec.unavailable) {
+      setIsListening(true);
+      rec.startActionWordListener(target, (q) => {
+        if (roundRef.current !== r) return;
+        hush();
+        onMatch(q);
+      });
+    }
+    speakWithState(text, () => {
+      onPromptEnd?.();
+      if (!micOnRef.current) {
+        (onMicGone || onTimeout)();
+        return;
+      }
+      later(onTimeout, 5500);
+    }, [target]);
+  };
+
   const triggerWrapUp = useCallback(() => {
-    if (recognizerRef.current) recognizerRef.current.stop();
-    setIsListening(false);
-    stopAnySpeech();
+    cancelRound();
+    resumeRef.current = null;
     setAppState('session_wrap_up');
 
     let wrapUpText = 'Great job today! Go find your grown-up and show them what you can be!';
@@ -191,20 +255,21 @@ export default function App() {
 
   const handleSelectCharacterRef = useRef<(charId: CharacterId) => void>(() => {});
 
-  // Voice listener when picking costumes (mic on only)
+  // Voice listener when picking costumes (mic on only). Starts with the prompt.
   const startListeningForChoice = useCallback(() => {
     if (!micOnRef.current || !recognizerRef.current) return;
+    const r = roundRef.current;
     setIsListening(true);
     recognizerRef.current.start((matchedChar, rawTranscript) => {
+      if (roundRef.current !== r) return;
       if (matchedChar && availableCharacters.some((c) => c.id === matchedChar.id)) {
         handleSelectCharacterRef.current(matchedChar.id);
       } else if (rawTranscript.trim().length > 4) {
         if (recognizerRef.current) recognizerRef.current.stop();
         setIsListening(false);
         const sampleNames = availableCharacters.slice(0, 5).map((c) => `a ${c.name.toLowerCase()}`).join(', ');
-        speakWithState(`Hmm, I don't know that one yet! Do you want to be ${sampleNames}?`, () => {
-          startListeningForChoice();
-        });
+        speakWithState(`Hmm, I don't know that one yet! Do you want to be ${sampleNames}?`);
+        startListeningForChoice();
       }
     });
   }, [availableCharacters, speakWithState]);
@@ -216,6 +281,7 @@ export default function App() {
 
   const actionsDoneRef = useRef(0);
   const askNextChoice = useCallback(() => {
+    resumeRef.current = null;
     setAppState('asking_next');
     setActiveAction(null);
     setQuizTarget(null);
@@ -225,9 +291,19 @@ export default function App() {
     speakWithState(costumeLine(false), () => {
       setAppState('listening_choice');
       setShowCharacterCards(true);
-      startListeningForChoice();
     });
+    startListeningForChoice();
   }, [speakWithState, startListeningForChoice]);
+
+  // "Let's see what (else) firefighters do. Press a picture."
+  const showPictures = useCallback((line: string) => {
+    resumeRef.current = () => showPictures(line);
+    speakWithState(line, () => {
+      setActionPromptState('idle');
+      setActiveAction(null);
+      setActionRepeatStage(1);
+    });
+  }, [speakWithState]);
 
   // ---------- Tap mode (mic off): "Press the fire engine!" ----------
   const askQuiz = useCallback((char: CharacterItem, lead: string) => {
@@ -238,6 +314,7 @@ export default function App() {
     setActionRepeatStage(1);
     setActiveAction(null);
     setActionPromptState('idle');
+    resumeRef.current = () => speakWithState(`Press the ${target.targetWord}!`);
     speakWithState(`${lead} Press the ${target.targetWord}!`);
   }, [speakWithState]);
 
@@ -247,7 +324,7 @@ export default function App() {
     hapticRoundComplete();
     actionsDoneRef.current += 1;
     const done = actionsDoneRef.current;
-    speakWithState(praise, () => {
+    const next = () => {
       if (done >= 2) {
         if (parentSettings.maxRounds > 0 && roundsCompleted >= parentSettings.maxRounds) {
           triggerWrapUp();
@@ -261,13 +338,11 @@ export default function App() {
         askQuiz(char, `Let's see what else ${plural} do.`);
         return;
       }
-      speakWithState(`Let's see what else ${plural} do. Press a picture.`, () => {
-        setActionPromptState('idle');
-        setActiveAction(null);
-        setActionRepeatStage(1);
-      });
-    });
-  }, [speakWithState, askNextChoice, askQuiz, parentSettings.maxRounds, roundsCompleted, triggerWrapUp]);
+      showPictures(`Let's see what else ${plural} do. Press a picture.`);
+    };
+    resumeRef.current = next;
+    speakWithState(praise, next);
+  }, [speakWithState, askNextChoice, askQuiz, showPictures, parentSettings.maxRounds, roundsCompleted, triggerWrapUp]);
 
   const handleQuizTap = useCallback((action: CharacterAction) => {
     if (!quizTarget || !currentCharacter || isSpeaking) return;
@@ -284,7 +359,9 @@ export default function App() {
     }
     if (actionRepeatStage === 1) {
       setActionRepeatStage(2);
-      speakWithState(`Well done. Let's try that one more time. Press the ${quizTarget.targetWord}!`);
+      const word = quizTarget.targetWord;
+      resumeRef.current = () => speakWithState(`Press the ${word}!`);
+      speakWithState(`Well done. Let's try that one more time. Press the ${word}!`);
       return;
     }
     logAttempt(currentCharacter.id, quizTarget.targetWord, 'picture', 'tapped', 'not-yet');
@@ -299,22 +376,24 @@ export default function App() {
     playSparkle();
     hapticRoundComplete();
     const plural = getPluralName(char);
-    speakWithState(praise, () => {
-      setTimeout(() => {
-        if (!micOnRef.current) {
-          askQuiz(char, `Let's see what ${plural} do.`);
-          return;
-        }
-        speakWithState(`Let's see what ${plural} do. Press a picture.`);
-      }, 350);
-    });
-  }, [speakWithState, askQuiz]);
+    const next = () => {
+      if (!micOnRef.current) {
+        askQuiz(char, `Let's see what ${plural} do.`);
+        return;
+      }
+      showPictures(`Let's see what ${plural} do. Press a picture.`);
+    };
+    resumeRef.current = next;
+    speakWithState(praise, () => later(next, 350));
+  }, [speakWithState, askQuiz, showPictures]);
 
   // Log the costume-name result and award a star for any genuine try.
   const finishNameWord = (char: CharacterItem, r: Result) => {
     logAttempt(char.id, getSingularName(char), 'costume', 'said', r);
     if (r !== 'didnt-try') awardStar();
   };
+
+  const runNameSecondRef = useRef<(char: CharacterItem, lead: boolean) => void>(() => {});
 
   const handleFirstRepeatDone = useCallback((char: CharacterItem, pronunciation?: 'perfect' | 'needs-practice') => {
     stopListening();
@@ -327,26 +406,49 @@ export default function App() {
     playSparkle();
     hapticRepeatSuccess();
     setRepeatStage(2);
+    runNameSecondRef.current(char, true);
+  }, [handleSecondRepeatDone, awardStar]);
+
+  const runNameSecond = (char: CharacterItem, lead: boolean) => {
     const singular = getSingularName(char);
-    speakWithState(`Well done. Let's try one more time: ${singular}.`, () => {
-      if (!micOnRef.current) {
-        finishNameWord(char, triedRef.current ? 'not-yet' : 'didnt-try');
-        handleSecondRepeatDone(char);
-        return;
-      }
-      setIsListening(true);
-      recognizerRef.current?.startActionWordListener(singular, (q) => {
+    setAppState('vocab_repeat');
+    resumeRef.current = () => runNameSecond(char, false);
+    const finishMissed = (praise?: string) => {
+      if (recognizerRef.current?.heardSpeech) triedRef.current = true;
+      finishNameWord(char, triedRef.current ? 'not-yet' : 'didnt-try');
+      handleSecondRepeatDone(char, praise);
+    };
+    promptAndListen(
+      `${lead ? 'Well done. ' : ''}Let's try one more time: ${singular}.`,
+      singular,
+      (q) => {
         triedRef.current = true;
         finishNameWord(char, q === 'perfect' ? 'good-try' : 'not-yet');
         handleSecondRepeatDone(char, q === 'perfect' ? 'Perfect!' : 'Well done!');
-      });
-      loopTimeoutRef.current = setTimeout(() => {
-        if (recognizerRef.current?.heardSpeech) triedRef.current = true;
-        finishNameWord(char, triedRef.current ? 'not-yet' : 'didnt-try');
-        handleSecondRepeatDone(char, 'Well done!');
-      }, 5500);
-    });
-  }, [handleSecondRepeatDone, speakWithState, awardStar]);
+      },
+      () => finishMissed('Well done!'),
+      undefined,
+      () => finishMissed()
+    );
+  };
+  runNameSecondRef.current = runNameSecond;
+
+  const runNameFirst = (char: CharacterItem) => {
+    const singular = getSingularName(char);
+    const article = getIndefiniteArticle(singular);
+    setAppState('vocab_intro');
+    setRepeatStage(1);
+    triedRef.current = false;
+    resumeRef.current = () => runNameFirst(char);
+    promptAndListen(
+      `You're ${article} ${singular}. Can you say ${singular}?`,
+      singular,
+      (q) => handleFirstRepeatDone(char, q),
+      () => handleFirstRepeatDone(char),
+      () => setAppState('vocab_repeat'),
+      () => handleSecondRepeatDone(char)
+    );
+  };
 
   // ---------- Picture word practice (mic on) ----------
   const finishPictureWord = (action: CharacterAction, r: Result) => {
@@ -362,6 +464,30 @@ export default function App() {
     [currentCharacter, finishPictureRound]
   );
 
+  const runActionSecond = (action: CharacterAction, lead: boolean) => {
+    setActionPromptState('repeating');
+    resumeRef.current = () => runActionSecond(action, false);
+    const finishMissed = () => {
+      if (recognizerRef.current?.heardSpeech) triedRef.current = true;
+      finishPictureWord(action, triedRef.current ? 'not-yet' : 'didnt-try');
+      handleActionSecondRepeatDone(action, 'Well done!');
+    };
+    promptAndListen(
+      `${lead ? 'Well done. ' : ''}Let's try that one more time: ${action.targetWord}.`,
+      action.targetWord,
+      (q) => {
+        triedRef.current = true;
+        finishPictureWord(action, q === 'perfect' ? 'good-try' : 'not-yet');
+        handleActionSecondRepeatDone(action, q === 'perfect' ? 'Perfect!' : 'Well done!');
+      },
+      finishMissed,
+      undefined,
+      finishMissed
+    );
+  };
+  const runActionSecondRef = useRef(runActionSecond);
+  runActionSecondRef.current = runActionSecond;
+
   const handleActionFirstRepeatDone = useCallback(
     (action: CharacterAction, pronunciation?: 'perfect' | 'needs-practice') => {
       stopListening();
@@ -374,27 +500,30 @@ export default function App() {
       playSparkle();
       hapticRepeatSuccess();
       setActionRepeatStage(2);
-      speakWithState(`Well done. Let's try that one more time: ${action.targetWord}.`, () => {
-        if (!micOnRef.current) {
-          finishPictureWord(action, triedRef.current ? 'not-yet' : 'didnt-try');
-          handleActionSecondRepeatDone(action, 'Well done!');
-          return;
-        }
-        setIsListening(true);
-        recognizerRef.current?.startActionWordListener(action.targetWord, (q) => {
-          triedRef.current = true;
-          finishPictureWord(action, q === 'perfect' ? 'good-try' : 'not-yet');
-          handleActionSecondRepeatDone(action, q === 'perfect' ? 'Perfect!' : 'Well done!');
-        });
-        loopTimeoutRef.current = setTimeout(() => {
-          if (recognizerRef.current?.heardSpeech) triedRef.current = true;
-          finishPictureWord(action, triedRef.current ? 'not-yet' : 'didnt-try');
-          handleActionSecondRepeatDone(action, 'Well done!');
-        }, 5500);
-      });
+      runActionSecondRef.current(action, true);
     },
-    [handleActionSecondRepeatDone, speakWithState, currentCharacter, awardStar]
+    [handleActionSecondRepeatDone, currentCharacter, awardStar]
   );
+
+  const runActionFirst = (action: CharacterAction) => {
+    triedRef.current = false;
+    setActiveAction(action);
+    setActionRepeatStage(1);
+    setActionPromptState('prompting');
+    resumeRef.current = () => runActionFirst(action);
+    promptAndListen(
+      `${action.actionSentence} ${action.repeatPrompt}`,
+      action.targetWord,
+      (q) => handleActionFirstRepeatDone(action, q),
+      () => handleActionFirstRepeatDone(action),
+      () => setActionPromptState('repeating'),
+      () => {
+        // Mic dropped out mid-turn: move on quietly, no star.
+        finishPictureWord(action, 'didnt-try');
+        handleActionSecondRepeatDone(action, 'Well done!');
+      }
+    );
+  };
 
   // Child presses a picture
   const handleActionClick = useCallback(
@@ -403,29 +532,9 @@ export default function App() {
         handleQuizTap(action);
         return;
       }
-      if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
-      stopAnySpeech();
-      if (recognizerRef.current) recognizerRef.current.stop();
-      setIsListening(false);
+      cancelRound();
       hapticActionPress();
-      triedRef.current = false;
-
-      setActiveAction(action);
-      setActionRepeatStage(1);
-      setActionPromptState('prompting');
-
-      speakWithState(`${action.actionSentence} ${action.repeatPrompt}`, () => {
-        if (!micOnRef.current) {
-          // Mic dropped out mid-turn: move on quietly, no star.
-          finishPictureWord(action, 'didnt-try');
-          handleActionSecondRepeatDone(action, 'Well done!');
-          return;
-        }
-        setActionPromptState('repeating');
-        setIsListening(true);
-        recognizerRef.current?.startActionWordListener(action.targetWord, (q) => handleActionFirstRepeatDone(action, q));
-        loopTimeoutRef.current = setTimeout(() => handleActionFirstRepeatDone(action), 5500);
-      });
+      runActionFirst(action);
     },
     [handleActionFirstRepeatDone, handleActionSecondRepeatDone, handleQuizTap, speakWithState]
   );
@@ -436,27 +545,26 @@ export default function App() {
       handleReplay();
       return;
     }
-    if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
-    stopAnySpeech();
+    cancelRound();
     setActiveAction(null);
     setActionPromptState('idle');
     setActionRepeatStage(1);
-    speakWithState(`Let's see what ${getPluralName(currentCharacter)} do. Press a picture.`);
-  }, [currentCharacter, quizTarget, handleReplay, speakWithState]);
+    showPictures(`Let's see what ${getPluralName(currentCharacter)} do. Press a picture.`);
+  }, [currentCharacter, quizTarget, handleReplay, showPictures]);
 
-  // Costume chosen (voice or tap). No star here: stars are for words.
+  // Costume chosen (voice or tap), at any moment. No star here: stars are for words.
   const handleSelectCharacter = useCallback((charId: CharacterId) => {
     const char = CHARACTERS.find((c) => c.id === charId);
     if (!char) return;
     if (isCharacterLocked(char, getParentSettings().premiumUnlocked)) return;
 
+    // Abandon whatever was happening: no star or log for an unfinished word.
+    cancelRound();
+    trayPausedRef.current = false;
     hapticCharacterTap();
     hasWelcomedRef.current = true;
     if (appState === 'start') startSessionTimerIfNeeded();
 
-    if (recognizerRef.current) recognizerRef.current.stop();
-    setIsListening(false);
-    stopAnySpeech();
     setActiveAction(null);
     setQuizTarget(null);
     setActionPromptState('idle');
@@ -471,59 +579,69 @@ export default function App() {
     setAppState('transforming');
     setShowMagicBurst(true);
     playMagicTransformation();
-    setTimeout(() => playCharacterSound(char.soundType), 400);
+    later(() => playCharacterSound(char.soundType), 400);
 
-    if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
-    loopTimeoutRef.current = setTimeout(() => {
+    const afterTransform = () => {
       setShowMagicBurst(false);
-      setAppState('vocab_intro');
       setRepeatStage(1);
-
-      const singular = getSingularName(char);
-      const article = getIndefiniteArticle(singular);
-
       if (!micOnRef.current) {
         // Tap mode: no name practice, go straight to the picture game.
-        speakWithState(`You're ${article} ${singular}!`, () => {
+        setAppState('vocab_intro');
+        const singular = getSingularName(char);
+        resumeRef.current = () => askQuiz(char, `Let's see what ${getPluralName(char)} do.`);
+        speakWithState(`You're ${getIndefiniteArticle(singular)} ${singular}!`, () => {
           setAppState('vocab_celebrate');
           askQuiz(char, `Let's see what ${getPluralName(char)} do.`);
         });
         return;
       }
-
-      speakWithState(`You're ${article} ${singular}. Can you say ${singular}?`, () => {
-        if (!micOnRef.current) {
-          handleSecondRepeatDone(char);
-          return;
-        }
-        setAppState('vocab_repeat');
-        setRepeatStage(1);
-        setIsListening(true);
-        recognizerRef.current?.startActionWordListener(singular, (q) => handleFirstRepeatDone(char, q));
-        loopTimeoutRef.current = setTimeout(() => handleFirstRepeatDone(char), 5500);
-      });
-    }, 1200);
+      runNameFirst(char);
+    };
+    resumeRef.current = afterTransform;
+    later(afterTransform, 1200);
   }, [appState, askQuiz, handleFirstRepeatDone, handleSecondRepeatDone, speakWithState, startSessionTimerIfNeeded]);
 
   handleSelectCharacterRef.current = handleSelectCharacter;
 
+  // Costume tray opened from the picture screen: pause; closing replays where we were.
+  const openTray = () => {
+    if (recognizerRef.current?.heardSpeech) triedRef.current = true;
+    cancelRound();
+    trayPausedRef.current = true;
+    setShowCharacterCards(true);
+  };
+  const closeTray = () => {
+    setShowCharacterCards(false);
+    if (trayPausedRef.current) {
+      trayPausedRef.current = false;
+      const resume = resumeRef.current;
+      if (resume) resume();
+    }
+  };
+  const handleTrayPick = (charId: CharacterId) => {
+    if (trayPausedRef.current && charId === selectedCharacterId) {
+      closeTray();
+      return;
+    }
+    handleSelectCharacter(charId);
+  };
+
   const handleStartApp = useCallback(() => {
+    cancelRound();
+    resumeRef.current = null;
+    trayPausedRef.current = false;
     setRoundsCompleted(0);
     setStarsEarned(0);
     setAppState('greeting');
     setShowCharacterCards(true);
     playSparkle();
     startSessionTimerIfNeeded();
-    speakWithState(costumeLine(true), () => {
-      setAppState('listening_choice');
-      startListeningForChoice();
-    });
+    speakWithState(costumeLine(true), () => setAppState('listening_choice'));
+    startListeningForChoice();
   }, [speakWithState, startListeningForChoice, startSessionTimerIfNeeded]);
 
   const handleRestart = useCallback(() => {
-    stopAnySpeech();
-    if (recognizerRef.current) recognizerRef.current.stop();
-    if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
+    cancelRound();
     setSelectedCharacterId(null);
     setShowCharacterCards(true);
     setActiveAction(null);
@@ -590,10 +708,9 @@ export default function App() {
                 key="character-cards-deck"
                 selectedCharacterId={selectedCharacterId}
                 characters={availableCharacters}
-                onSelect={handleSelectCharacter}
-                disabled={appState === 'vocab_intro' || appState === 'vocab_repeat'}
+                onSelect={handleTrayPick}
                 showCloseButton={Boolean(currentCharacter)}
-                onClose={() => setShowCharacterCards(false)}
+                onClose={closeTray}
                 isListening={isListening}
                 isSpeaking={isSpeaking}
                 micAvailable={micOn}
@@ -652,7 +769,8 @@ export default function App() {
                     }
                   }}
                   onCharacterBadgeClick={handleCharacterBadgeClick}
-                  onShowCards={() => setShowCharacterCards(true)}
+                  onShowCards={openTray}
+                  trayThumbs={availableCharacters.filter((c) => c.id !== currentCharacter.id).slice(0, 3).map((c) => c.id)}
                 />
               </motion.div>
             ) : null}

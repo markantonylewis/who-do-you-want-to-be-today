@@ -97,12 +97,22 @@ export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
               id="hud-show-cards-btn"
               onClick={onShowCards}
               aria-label="Costumes"
-              className="cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-b-4 border-amber-300 text-amber-950 w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm active:translate-y-0.5 active:border-b-2 transition-transform"
+              className="relative cursor-pointer bg-amber-50 hover:bg-amber-100 border-2 border-b-[6px] border-amber-400 w-20 h-16 rounded-2xl shadow-md active:translate-y-1 active:border-b-2 transition-transform overflow-hidden"
             >
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor" aria-hidden="true">
-                <rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="8" rx="2" />
-                <rect x="3" y="13" width="8" height="8" rx="2" /><rect x="13" y="13" width="8" height="8" rx="2" />
-              </svg>
+              {/* Three little costume pictures, fanned out like cards */}
+              {(trayThumbs.length ? trayThumbs : [character.id]).slice(0, 3).map((id, i, arr) => {
+                const offset = i - (arr.length - 1) / 2;
+                return (
+                  <span
+                    key={id}
+                    aria-hidden="true"
+                    className="absolute top-1/2 left-1/2"
+                    style={{ transform: `translate(calc(-50% + ${offset * 18}px), -50%) rotate(${offset * 12}deg)`, zIndex: i === 1 ? 2 : 1 }}
+                  >
+                    <CostumeThumb id={id} size={40} />
+                  </span>
+                );
+              })}
             </button>
           )}
         </div>
