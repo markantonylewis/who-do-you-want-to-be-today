@@ -104,11 +104,6 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       </div>
 
       <div className="px-6 pb-8 pt-2 max-w-md w-full mx-auto flex flex-col gap-2.5">
-        {step === 'welcome' && (
-          <button id="setup-continue" className={primary} onClick={() => { primeNarratorAudio(); setStep('camera'); }}>
-            Continue
-          </button>
-        )}
         {(step === 'camera' || step === 'mic') && (
           <>
             <button id={`setup-allow-${step}`} className={primary} disabled={busy} onClick={() => choose(step, true)}>
