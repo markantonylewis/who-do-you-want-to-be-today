@@ -7,9 +7,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Who Am I Today? — Toddler Dress-Up Adventure" },
-      { name: "description", content: "A voice-first costume dress-up and vocabulary adventure for toddlers with real-time AR face filters." },
+      { name: "description", content: "A costume game where your toddler practises saying words out loud. Helps diction and vocabulary. Free to play with no ads, and nothing your child says is ever recorded." },
       { property: "og:title", content: "Who Am I Today? — Toddler Dress-Up Adventure" },
-      { property: "og:description", content: "Voice-first costume dress-up and vocabulary fun for toddlers, with AR face filters." },
+      { property: "og:description", content: "A costume game where your toddler practises saying words out loud. Helps diction and vocabulary. Free to play with no ads." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "viewport", content: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" },
