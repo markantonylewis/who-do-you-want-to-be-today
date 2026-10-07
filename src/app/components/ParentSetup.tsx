@@ -3,14 +3,14 @@ import { saveParentSettings, getParentSettings } from '../utils/parentSettings';
 import { requestCamera, requestMic, isInIframe, hasSpeechRecognition } from '../utils/permissions';
 import { primeNarratorAudio } from '../utils/speechService';
 
-type Step = 'welcome' | 'camera' | 'mic' | 'name';
+type Step = 'camera' | 'mic' | 'name';
 
 /**
  * One-time grown-up setup, shown before the first game.
  * Big buttons sit at the bottom so it works one-handed in well under 30 seconds.
  */
 export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
-  const [step, setStep] = useState<Step>('welcome');
+  const [step, setStep] = useState<Step>('camera');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [name, setName] = useState(getParentSettings().childName || '');
@@ -46,7 +46,7 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
     onDone();
   };
 
-  const stepIndex = ['welcome', 'camera', 'mic', 'name'].indexOf(step);
+  const stepIndex = ['camera', 'mic', 'name'].indexOf(step);
   const primary =
     'w-full py-4 rounded-2xl bg-amber-500 border-b-[6px] border-amber-700 text-white font-black text-lg active:translate-y-1 active:border-b-2 transition-transform disabled:opacity-60';
   const secondary =
