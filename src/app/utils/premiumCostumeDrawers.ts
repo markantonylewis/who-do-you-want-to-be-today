@@ -206,10 +206,8 @@ export function drawPremiumCostume(ctx: Ctx, characterId: CharacterId, s: number
       foreheadCap(ctx, s, '#1f2937');
       shape(ctx, '#ffffff', () => {
         ctx.moveTo(-s * 0.48, -s * 0.03);
-        ctx.quadraticCurveTo(-s * 0.36, -s * 0.44, -s * 0.16, -s * 0.38);
-        ctx.quadraticCurveTo(-s * 0.04, -s * 0.34, 0, -s * 0.22);
-        ctx.quadraticCurveTo(s * 0.04, -s * 0.34, s * 0.16, -s * 0.38);
-        ctx.quadraticCurveTo(s * 0.36, -s * 0.44, s * 0.48, -s * 0.03);
+        ctx.bezierCurveTo(-s * 0.5, -s * 0.36, -s * 0.2, -s * 0.5, 0, -s * 0.3);
+        ctx.bezierCurveTo(s * 0.2, -s * 0.5, s * 0.5, -s * 0.36, s * 0.48, -s * 0.03);
         ctx.quadraticCurveTo(0, -s * 0.2, -s * 0.48, -s * 0.03);
       });
       cheeks(ctx, s, '#ffffff');
