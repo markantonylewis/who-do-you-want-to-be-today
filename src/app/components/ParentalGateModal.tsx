@@ -13,10 +13,16 @@ const MAX_WRONG = 3;
 const LOCKOUT_MS = 60_000;
 const LOCK_KEY = 'whoami_gate_lock_until';
 
-function newQuestion() {
-  const a = 3 + Math.floor(Math.random() * 7); // 3–9
-  const b = 6 + Math.floor(Math.random() * 4); // 6–9
-  return { a, b, answer: a * b };
+function newQuestion(previous?: { a: number; b: number }) {
+  const questions = [];
+  for (let a = 1; a <= 5; a += 1) {
+    for (let b = 1; b <= 5; b += 1) {
+      // Also avoid the same multiplication with its numbers swapped.
+      if (previous && ((a === previous.a && b === previous.b) || (a === previous.b && b === previous.a))) continue;
+      questions.push({ a, b, answer: a * b });
+    }
+  }
+  return questions[Math.floor(Math.random() * questions.length)];
 }
 
 function readLock(): number {
@@ -29,7 +35,7 @@ function readLock(): number {
 
 /** Grown-ups only: a written multiplication typed on a number pad, with a lockout after wrong answers. */
 export const ParentalGateModal: React.FC<ParentalGateModalProps> = ({ isOpen, onSuccess, onCancel }) => {
-  const [q, setQ] = useState(newQuestion);
+  const [q, setQ] = useState(() => newQuestion());
   const [entry, setEntry] = useState('');
   const [wrong, setWrong] = useState(0);
   const [lockedUntil, setLockedUntil] = useState(0);
@@ -38,7 +44,7 @@ export const ParentalGateModal: React.FC<ParentalGateModalProps> = ({ isOpen, on
 
   useEffect(() => {
     if (isOpen) {
-      setQ(newQuestion());
+      setQ((previous) => newQuestion(previous));
       setEntry('');
       setWrong(0);
       setLockedUntil(readLock());
@@ -64,7 +70,7 @@ export const ParentalGateModal: React.FC<ParentalGateModalProps> = ({ isOpen, on
     setTimeout(() => setShake(false), 400);
     const w = wrong + 1;
     setEntry('');
-    setQ(newQuestion());
+    setQ((previous) => newQuestion(previous));
     if (w >= MAX_WRONG) {
       const until = Date.now() + LOCKOUT_MS;
       try { localStorage.setItem(LOCK_KEY, String(until)); } catch { /* ignore */ }
