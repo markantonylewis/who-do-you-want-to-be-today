@@ -64,7 +64,7 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
           ))}
         </div>
         <h1 className="text-3xl font-black leading-tight">Who Am I Today?</h1>
-        {step === 'name' && (
+        {step === 'camera' && (
           <>
             <p className="text-base">
               A costume game where your toddler practises saying words out loud. Helps diction and vocabulary.
