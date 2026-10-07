@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CostumePreviewRouteImport } from './routes/costume-preview'
 import { Route as ApiPublicTtsRouteImport } from './routes/api/public/tts'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CostumePreviewRoute = CostumePreviewRouteImport.update({
+  id: '/costume-preview',
+  path: '/costume-preview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTtsRoute = ApiPublicTtsRouteImport.update({
@@ -25,27 +31,31 @@ const ApiPublicTtsRoute = ApiPublicTtsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/costume-preview': typeof CostumePreviewRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/costume-preview': typeof CostumePreviewRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/costume-preview': typeof CostumePreviewRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/public/tts'
+  fullPaths: '/' | '/costume-preview' | '/api/public/tts'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/public/tts'
-  id: '__root__' | '/' | '/api/public/tts'
+  to: '/' | '/costume-preview' | '/api/public/tts'
+  id: '__root__' | '/' | '/costume-preview' | '/api/public/tts'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CostumePreviewRoute: typeof CostumePreviewRoute
   ApiPublicTtsRoute: typeof ApiPublicTtsRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/costume-preview': {
+      id: '/costume-preview'
+      path: '/costume-preview'
+      fullPath: '/costume-preview'
+      preLoaderRoute: typeof CostumePreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/tts': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CostumePreviewRoute: CostumePreviewRoute,
   ApiPublicTtsRoute: ApiPublicTtsRoute,
 }
 export const routeTree = rootRouteImport
