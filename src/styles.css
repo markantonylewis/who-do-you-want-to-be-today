@@ -154,3 +154,27 @@
 }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Fallback first; iOS browser chrome changes the dynamic viewport in play. */
+.viewport-screen { height: 100vh; height: 100dvh; }
+#who-am-i-today-root { overflow: hidden; overscroll-behavior: none; }
+.safe-screen {
+  padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+}
+.safe-screen > [id$="-card"] { max-height: 100%; min-height: 0; }
+.game-dock { padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
+.game-top-bar { top: calc(0.75rem + env(safe-area-inset-top, 0px)); }
+#parent-setup { padding-top: env(safe-area-inset-top, 0px); }
+#parent-setup > :first-child { min-height: 0; overscroll-behavior: contain; }
+#parent-setup > :last-child { flex-shrink: 0; padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)); }
+.costume-review { padding-top: calc(1.5rem + env(safe-area-inset-top, 0px)); padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
+.costume-review figure > canvas { max-width: 100%; height: auto; }

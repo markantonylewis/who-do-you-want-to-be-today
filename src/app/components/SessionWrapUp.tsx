@@ -24,7 +24,7 @@ export const SessionWrapUp: React.FC<SessionWrapUpProps> = ({ onRestart, starsEa
   return (
     <div
       id="session-wrap-up-screen"
-      className="fixed inset-0 z-50 bg-gradient-to-b from-amber-200 via-orange-100 to-rose-200 flex flex-col items-center justify-center p-6 text-center select-none"
+      className="viewport-screen safe-screen h-dvh fixed inset-0 z-50 bg-gradient-to-b from-amber-200 via-orange-100 to-rose-200 flex flex-col items-center justify-center p-6 text-center select-none"
     >
       <motion.div
         initial={{ scale: 0.6, opacity: 0 }}

@@ -564,7 +564,7 @@ export const CostumeCanvas: React.FC<CostumeCanvasProps> = ({
       <div className="absolute inset-2 sm:inset-3 rounded-3xl border-4 sm:border-6 border-amber-400/50 shadow-2xl pointer-events-none ring-2 ring-white/40" />
 
       {/* 5. TOP EDGE CONTROLS BAR (icons only, no text for the child) */}
-      <div className="absolute top-3 left-4 right-4 z-30 flex items-center justify-between pointer-events-auto">
+      <div className="game-top-bar absolute top-3 left-4 right-4 z-30 flex items-center justify-between pointer-events-auto">
         {/* Left: earned stars, shown as icons */}
         <div
           className="flex items-center gap-0.5 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full shadow-md border-2 border-amber-300 min-h-[32px]"

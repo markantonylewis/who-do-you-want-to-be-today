@@ -55,7 +55,7 @@ export const ParentSetup: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   return (
     <div
       id="parent-setup"
-      className="fixed inset-0 z-[60] bg-gradient-to-b from-amber-100 to-orange-100 flex flex-col text-slate-900"
+      className="viewport-screen h-dvh fixed inset-0 z-[60] overflow-hidden bg-gradient-to-b from-amber-100 to-orange-100 flex flex-col text-slate-900"
     >
       <div className="flex-1 overflow-y-auto px-6 pt-10 pb-4 max-w-md w-full mx-auto flex flex-col gap-4">
         <div className="flex gap-1.5" aria-hidden="true">

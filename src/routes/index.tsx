@@ -12,14 +12,14 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "A costume game where your toddler practises saying words out loud. Helps diction and vocabulary. Free to play with no ads." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "viewport", content: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" },
+      { name: "viewport", content: "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" },
     ],
   }),
   component: Index,
 });
 
 function Loading() {
-  return <div className="flex h-screen items-center justify-center text-2xl font-bold">Getting dressed up…</div>;
+  return <div className="viewport-screen flex h-dvh items-center justify-center" aria-label="Loading" />;
 }
 
 function Index() {

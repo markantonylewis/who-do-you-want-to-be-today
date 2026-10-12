@@ -1,5 +1,6 @@
 // @ts-nocheck -- migrated from AI Studio; strict typing to be tightened later
 import { interpretToddler } from '@/lib/toddler.functions';
+import { RecognitionSession } from './recognitionSession';
 // Natural narrator voice via ElevenLabs (/api/tts); falls back to device voice.
 const SERVER_TTS_ENABLED = true;
 const ttsCache = new Map<string, ArrayBuffer>();
@@ -755,7 +756,8 @@ export async function speakText(
 // Speech Recognition wrapper with toddler forgiving matching
 export class ToddlerSpeechRecognizer {
   private recognition: any = null;
-  private isListening = false;
+  private session: RecognitionSession | null = null;
+  private listenerVersion = 0;
   private onResultCallback: ((character: CharacterItem | null, rawTranscript: string) => void) | null = null;
   private onActionMatchCallback: ((quality: 'perfect' | 'needs-practice') => void) | null = null;
   private targetWord: string = '';
@@ -770,8 +772,7 @@ export class ToddlerSpeechRecognizer {
   private markUnavailable() {
     if (this.unavailable) return;
     this.unavailable = true;
-    this.isListening = false;
-    try { this.recognition?.abort?.(); } catch { /* ignore */ }
+    this.pauseSession();
     const cb = this.onUnavailable;
     if (cb) cb();
   }
@@ -787,8 +788,12 @@ export class ToddlerSpeechRecognizer {
       this.recognition.interimResults = true;
       const userLang = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : 'en-US';
       this.recognition.lang = userLang;
+      this.session = new RecognitionSession(this.recognition);
+      this.recognition.onstart = () => this.session?.onStart();
 
       this.recognition.onresult = async (event: any) => {
+        if (!this.onActionMatchCallback && !this.onResultCallback) return;
+        const version = this.listenerVersion;
         let transcript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
@@ -845,6 +850,7 @@ export class ToddlerSpeechRecognizer {
           // If toddler said something not immediately matched, check server AI interpreter
           try {
             const data = await interpretToddler({ data: { transcript: childText, customWords } });
+            if (version !== this.listenerVersion) return;
             if (data.characterId) {
               const char = CHARACTERS.find(c => c.id === data.characterId);
               if (char && this.onResultCallback) {
@@ -855,6 +861,7 @@ export class ToddlerSpeechRecognizer {
           } catch {
             // Local match will suffice
           }
+          if (version !== this.listenerVersion) return;
 
           const isFinal = event.results[event.results.length - 1].isFinal;
           if (isFinal && this.onResultCallback) {
@@ -874,15 +881,7 @@ export class ToddlerSpeechRecognizer {
         }
       };
 
-      this.recognition.onend = () => {
-        if (this.isListening && !this.unavailable) {
-          try {
-            this.recognition.start();
-          } catch {
-            // Ignore start error if already running
-          }
-        }
-      };
+      this.recognition.onend = () => this.session?.onEnd();
     } else {
       this.unavailable = true;
     }
@@ -892,20 +891,11 @@ export class ToddlerSpeechRecognizer {
     onResult: (character: CharacterItem | null, rawTranscript: string) => void,
     onSpeechDetected?: () => void
   ) {
+    this.clearListener();
     this.onResultCallback = onResult;
     this.onActionMatchCallback = null;
     this.targetWord = '';
     this.onSpeechDetectedCallback = onSpeechDetected || null;
-    if (this.unavailable) return;
-    this.isListening = true;
-
-    if (this.recognition) {
-      try {
-        this.recognition.start();
-      } catch {
-        // Already active
-      }
-    }
   }
 
   public startActionWordListener(
@@ -913,45 +903,34 @@ export class ToddlerSpeechRecognizer {
     onMatch: (quality: 'perfect' | 'needs-practice') => void,
     onSpeechDetected?: () => void
   ) {
+    this.clearListener();
     this.targetWord = targetWord.toLowerCase().trim();
     this.onActionMatchCallback = onMatch;
     this.onResultCallback = null;
     this.onSpeechDetectedCallback = onSpeechDetected || null;
     this.heardSpeech = false;
-    if (this.unavailable) return;
-    this.isListening = true;
-
-    if (this.recognition) {
-      try {
-        this.recognition.start();
-      } catch {
-        // If recognition is ending/transitioning, attempt start after brief delay
-        setTimeout(() => {
-          if (this.isListening && this.recognition) {
-            try {
-              this.recognition.start();
-            } catch {
-              // already active
-            }
-          }
-        }, 120);
-      }
-    }
   }
 
-  public stop() {
-    this.isListening = false;
+  public clearListener() {
+    this.listenerVersion += 1;
     this.onResultCallback = null;
     this.onActionMatchCallback = null;
     this.targetWord = '';
     this.onSpeechDetectedCallback = null;
-    if (this.recognition) {
-      try {
-        this.recognition.stop();
-      } catch {
-        // ignore
-      }
-    }
+    this.heardSpeech = false;
+  }
+
+  public resumeSession() {
+    if (!this.unavailable) this.session?.resume();
+  }
+
+  public pauseSession() {
+    this.clearListener();
+    this.session?.pause();
+  }
+
+  public stop() {
+    this.pauseSession();
   }
 }
 
