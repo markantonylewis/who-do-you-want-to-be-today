@@ -106,30 +106,6 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Capture belongs to play, not to individual narrator prompts or rounds.
-  const playWasPausedRef = useRef(false);
-  const resumePlayRef = useRef<() => void>(() => {});
-  useEffect(() => {
-    const syncCapture = () => {
-      const playing = !isParentScreenActive && appState !== 'session_wrap_up' && !document.hidden;
-      if (!playing) {
-        recognizerRef.current?.pauseSession();
-        if (document.hidden && !isParentScreenActive && appState !== 'session_wrap_up') cancelRound();
-        playWasPausedRef.current = true;
-        return;
-      }
-      if (micOn) recognizerRef.current?.resumeSession();
-      else recognizerRef.current?.pauseSession();
-      if (playWasPausedRef.current) {
-        playWasPausedRef.current = false;
-        resumePlayRef.current();
-      }
-    };
-    syncCapture();
-    document.addEventListener('visibilitychange', syncCapture);
-    return () => document.removeEventListener('visibilitychange', syncCapture);
-  }, [isParentScreenActive, appState === 'session_wrap_up', micOn]);
-
   // Re-enabling the mic in settings gives the recognizer another chance.
   useEffect(() => {
     if (parentSettings.micEnabled && micUnavailable && recognizerRef.current && !recognizerRef.current.unavailable) {
@@ -153,6 +129,30 @@ export default function App() {
       timersRef.current.forEach((t) => clearTimeout(t));
     };
   }, []);
+
+  // Capture belongs to play, not to individual narrator prompts or rounds.
+  const playWasPausedRef = useRef(false);
+  const resumePlayRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const syncCapture = () => {
+      const playing = !isParentScreenActive && appState !== 'session_wrap_up' && !document.hidden;
+      if (!playing) {
+        recognizerRef.current?.pauseSession();
+        if (document.hidden && !isParentScreenActive && appState !== 'session_wrap_up') cancelRound();
+        playWasPausedRef.current = true;
+        return;
+      }
+      if (micOn) recognizerRef.current?.resumeSession();
+      else recognizerRef.current?.pauseSession();
+      if (playWasPausedRef.current) {
+        playWasPausedRef.current = false;
+        resumePlayRef.current();
+      }
+    };
+    syncCapture();
+    document.addEventListener('visibilitychange', syncCapture);
+    return () => document.removeEventListener('visibilitychange', syncCapture);
+  }, [isParentScreenActive, appState === 'session_wrap_up', micOn]);
 
   // ---------- Round control ----------
   // Every voice line, listener and timer belongs to one round. Switching costume,
