@@ -16,6 +16,7 @@ class BrowserRecognition {
 
 function createRecognizer() {
   vi.stubGlobal('window', { SpeechRecognition: BrowserRecognition });
+  vi.stubGlobal('localStorage', { getItem: () => null });
   resetEchoGuard();
   return new ToddlerSpeechRecognizer();
 }

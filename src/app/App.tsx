@@ -149,9 +149,14 @@ export default function App() {
         resumePlayRef.current();
       }
     };
-    syncCapture();
+    // Defer initial capture until mounting settles (React development replay must
+    // not briefly start a throwaway microphone session).
+    const initialCapture = setTimeout(syncCapture, 0);
     document.addEventListener('visibilitychange', syncCapture);
-    return () => document.removeEventListener('visibilitychange', syncCapture);
+    return () => {
+      clearTimeout(initialCapture);
+      document.removeEventListener('visibilitychange', syncCapture);
+    };
   }, [isParentScreenActive, appState === 'session_wrap_up', micOn]);
 
   // ---------- Round control ----------
