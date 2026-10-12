@@ -1,5 +1,9 @@
 # Roadmap
 
+## iPhone viewport and microphone
+- [ ] Fit play and full-screen layers to the dynamic viewport with safe-area spacing; verify 390×664 and 390×844
+- [ ] Keep one recognition session during play, pause at parent/wrap-up/hidden boundaries, and test restart backoff and listener routing
+
 ## Restore character-defining accessories
 - [x] Restore owl/teacher glasses, pirate patch, superhero mask, large clown nose and hanging elephant trunk
 - [x] Verify the six accessories on the review page and in the game at desktop and phone sizes
