@@ -93,7 +93,7 @@ export const ParentalGateModal: React.FC<ParentalGateModalProps> = ({ isOpen, on
   return (
     <div
       id="parental-gate-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="viewport-screen safe-screen h-dvh fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel();
       }}
@@ -102,7 +102,7 @@ export const ParentalGateModal: React.FC<ParentalGateModalProps> = ({ isOpen, on
         id="parental-gate-card"
         initial={{ scale: 0.9, opacity: 0, y: 15 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border-4 border-amber-300 p-6 flex flex-col items-center gap-4 text-center text-slate-800"
+        className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border-4 border-amber-300 p-6 flex flex-col items-center gap-4 text-center text-slate-800 overflow-y-auto shrink-0"
       >
         <div className="w-14 h-14 rounded-2xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-amber-900" aria-hidden="true">
           <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2.2">

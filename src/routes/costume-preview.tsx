@@ -22,7 +22,7 @@ export const Route = createFileRoute("/costume-preview")({
 function CostumePreview() {
   const free = new Set<string>(FREE_CHARACTER_IDS as readonly string[]);
   return (
-    <main className="min-h-screen bg-amber-50 p-6">
+    <main className="costume-review viewport-screen h-dvh overflow-y-auto overscroll-contain bg-amber-50 p-6">
       <h1 className="text-2xl font-black text-amber-950">All costumes ({CHARACTERS.length})</h1>
       <p className="mb-6 text-sm font-semibold text-amber-800">
         Grown-up check page. Glasses and superhero eye holes are see-through; the pirate patch, clown nose and elephant trunk are approved face accessories.

@@ -168,7 +168,7 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
   return (
     <div
       id="parent-settings-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overflow-y-auto"
+      className="viewport-screen safe-screen h-dvh fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           handleCancel();
@@ -180,7 +180,7 @@ export const ParentSettingsModal: React.FC<ParentSettingsModalProps> = ({
         initial={{ scale: 0.94, opacity: 0, y: 15 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.94, opacity: 0, y: 15 }}
-        className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border-4 border-amber-300 p-4 sm:p-6 flex flex-col gap-3 text-slate-800 my-auto max-h-[90vh] overflow-hidden"
+        className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border-4 border-amber-300 p-4 sm:p-6 flex flex-col gap-3 text-slate-800 my-auto max-h-full overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-amber-100 pb-3 shrink-0">

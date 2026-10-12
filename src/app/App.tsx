@@ -106,6 +106,30 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  // Capture belongs to play, not to individual narrator prompts or rounds.
+  const playWasPausedRef = useRef(false);
+  const resumePlayRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const syncCapture = () => {
+      const playing = !isParentScreenActive && appState !== 'session_wrap_up' && !document.hidden;
+      if (!playing) {
+        recognizerRef.current?.pauseSession();
+        if (document.hidden && !isParentScreenActive && appState !== 'session_wrap_up') cancelRound();
+        playWasPausedRef.current = true;
+        return;
+      }
+      if (micOn) recognizerRef.current?.resumeSession();
+      else recognizerRef.current?.pauseSession();
+      if (playWasPausedRef.current) {
+        playWasPausedRef.current = false;
+        resumePlayRef.current();
+      }
+    };
+    syncCapture();
+    document.addEventListener('visibilitychange', syncCapture);
+    return () => document.removeEventListener('visibilitychange', syncCapture);
+  }, [isParentScreenActive, appState === 'session_wrap_up', micOn]);
+
   // Re-enabling the mic in settings gives the recognizer another chance.
   useEffect(() => {
     if (parentSettings.micEnabled && micUnavailable && recognizerRef.current && !recognizerRef.current.unavailable) {
@@ -161,7 +185,7 @@ export default function App() {
     roundRef.current += 1;
     hush();
     clearTimers();
-    recognizerRef.current?.stop();
+    recognizerRef.current?.clearListener();
     setIsListening(false);
   };
 
@@ -196,7 +220,7 @@ export default function App() {
     clearTimers();
     if (recognizerRef.current) {
       if (recognizerRef.current.heardSpeech) triedRef.current = true;
-      recognizerRef.current.stop();
+      recognizerRef.current.clearListener();
     }
     setIsListening(false);
   };
@@ -265,7 +289,7 @@ export default function App() {
       if (matchedChar && availableCharacters.some((c) => c.id === matchedChar.id)) {
         handleSelectCharacterRef.current(matchedChar.id);
       } else if (rawTranscript.trim().length > 4) {
-        if (recognizerRef.current) recognizerRef.current.stop();
+        if (recognizerRef.current) recognizerRef.current.clearListener();
         setIsListening(false);
         const sampleNames = availableCharacters.slice(0, 5).map((c) => `a ${c.name.toLowerCase()}`).join(', ');
         speakWithState(`Hmm, I don't know that one yet! Do you want to be ${sampleNames}?`);
@@ -651,6 +675,15 @@ export default function App() {
     handleStartApp();
   }, [handleStartApp]);
 
+  resumePlayRef.current = () => {
+    if (!hasWelcomedRef.current || trayPausedRef.current) return;
+    if (resumeRef.current) resumeRef.current();
+    else {
+      speakWithState(costumeLine(false));
+      startListeningForChoice();
+    }
+  };
+
   // Welcome once setup is done (and again on first tap if audio was blocked)
   useEffect(() => {
     if (!setupComplete || hasWelcomedRef.current) return;
@@ -681,7 +714,7 @@ export default function App() {
   return (
     <main
       id="who-am-i-today-root"
-      className="relative w-screen h-screen overflow-hidden bg-gradient-to-b from-amber-100 via-orange-50 to-amber-200 flex flex-col justify-end select-none"
+      className="viewport-screen relative w-full h-dvh overflow-hidden bg-gradient-to-b from-amber-100 via-orange-50 to-amber-200 flex flex-col justify-end select-none"
     >
       {/* 1. PERMANENT LIVE AR MAGIC MIRROR / FACE INTERFACE */}
       {/* Contains mirrored video or cartoon avatar, golden frame, and edge top controls */}
@@ -701,7 +734,7 @@ export default function App() {
       {/* 3. LOWER DOCKED INTERFACE: The interaction HUD drops down and replaces the costume cards when required */}
       {/* Hidden when parent screen is active so costume cards never obscure settings */}
       {!isParentScreenActive && (
-        <footer className="relative z-20 w-full bg-gradient-to-t from-black/65 via-black/25 to-transparent pb-3 pt-4 px-3 sm:px-4 flex flex-col items-center justify-end">
+        <footer className="game-dock relative z-20 w-full bg-gradient-to-t from-black/65 via-black/25 to-transparent pb-3 pt-4 px-3 sm:px-4 flex flex-col items-center justify-end">
           <AnimatePresence mode="wait">
             {showCharacterCards ? (
               <CharacterBar

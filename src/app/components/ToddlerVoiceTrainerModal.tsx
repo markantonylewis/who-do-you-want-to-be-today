@@ -117,7 +117,7 @@ export const ToddlerVoiceTrainerModal: React.FC<ToddlerVoiceTrainerModalProps> =
   return (
     <div
       id="voice-trainer-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
+      className="viewport-screen safe-screen h-dvh fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           stopTesting();
@@ -130,7 +130,7 @@ export const ToddlerVoiceTrainerModal: React.FC<ToddlerVoiceTrainerModalProps> =
         initial={{ scale: 0.92, opacity: 0, y: 16 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.92, opacity: 0, y: 16 }}
-        className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border-4 border-amber-300 p-4 sm:p-6 flex flex-col gap-4 text-slate-800 my-auto max-h-[92vh] overflow-y-auto"
+        className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border-4 border-amber-300 p-4 sm:p-6 flex flex-col gap-4 text-slate-800 my-auto max-h-full overflow-y-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-amber-100 pb-3">
