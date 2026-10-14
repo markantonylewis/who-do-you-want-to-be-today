@@ -82,6 +82,13 @@ export default function App() {
   const lastLineRef = useRef<string>('');
   const triedRef = useRef<boolean>(false); // any speech heard during this word's two goes
   const usedQuizRef = useRef<string[]>([]);
+  // Session limit reached: finish the current costume, then wrap up.
+  const finishUpRef = useRef(false);
+  const lastTapAtRef = useRef(0);
+  const appStateRef = useRef(appState);
+  appStateRef.current = appState;
+  const selectedIdRef = useRef(selectedCharacterId);
+  selectedIdRef.current = selectedCharacterId;
   const baseCharacter = CHARACTERS.find((c) => c.id === selectedCharacterId) || null;
   const currentCharacter = useMemo(
     () => (baseCharacter ? { ...baseCharacter, actions: actionsFor(baseCharacter, parentSettings.premiumUnlocked) } : null),
@@ -275,12 +282,15 @@ export default function App() {
     speakWithState(wrapUpText);
   }, [parentSettings.wrapUpRoutine, speakWithState]);
 
+  const triggerWrapUpRef = useRef(triggerWrapUp);
+  triggerWrapUpRef.current = triggerWrapUp;
   const startSessionTimerIfNeeded = useCallback(() => {
     if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
+    finishUpRef.current = false;
     if (parentSettings.sessionTimeMinutes > 0) {
-      sessionTimerRef.current = setTimeout(() => triggerWrapUp(), parentSettings.sessionTimeMinutes * 60 * 1000);
+      sessionTimerRef.current = setTimeout(() => { finishUpRef.current = true; }, parentSettings.sessionTimeMinutes * 60 * 1000);
     }
-  }, [parentSettings.sessionTimeMinutes, triggerWrapUp]);
+  }, [parentSettings.sessionTimeMinutes]);
 
   const handleSelectCharacterRef = useRef<(charId: CharacterId) => void>(() => {});
 
@@ -292,6 +302,7 @@ export default function App() {
     recognizerRef.current.start((matchedChar, rawTranscript) => {
       if (roundRef.current !== r) return;
       if (matchedChar && availableCharacters.some((c) => c.id === matchedChar.id)) {
+        if (trayPausedRef.current && matchedChar.id === selectedIdRef.current) return;
         handleSelectCharacterRef.current(matchedChar.id);
       } else if (rawTranscript.trim().length > 4) {
         if (recognizerRef.current) recognizerRef.current.clearListener();
@@ -300,7 +311,7 @@ export default function App() {
         speakWithState(`Hmm, I don't know that one yet! Do you want to be ${sampleNames}?`);
         startListeningForChoice();
       }
-    });
+    }, undefined, selectedIdRef.current);
   }, [availableCharacters, speakWithState]);
 
   const costumeLine = (first: boolean) =>
@@ -355,7 +366,7 @@ export default function App() {
     const done = actionsDoneRef.current;
     const next = () => {
       if (done >= 2) {
-        if (parentSettings.maxRounds > 0 && roundsCompleted >= parentSettings.maxRounds) {
+        if (finishUpRef.current || parentSettings.maxRounds > 0 && roundsCompleted >= parentSettings.maxRounds) {
           triggerWrapUp();
           return;
         }
@@ -632,12 +643,30 @@ export default function App() {
 
   handleSelectCharacterRef.current = handleSelectCharacter;
 
+  // Time is up: wrap up at once if the child isn't mid-costume or has gone quiet for 60 s.
+  useEffect(() => {
+    const onTap = () => { lastTapAtRef.current = performance.now(); };
+    window.addEventListener('pointerdown', onTap);
+    const id = setInterval(() => {
+      if (!finishUpRef.current || appStateRef.current === 'session_wrap_up' || isParentScreenActive) return;
+      const choosing = ['greeting', 'asking_next', 'listening_choice'].includes(appStateRef.current) || !selectedIdRef.current;
+      const lastActive = Math.max(lastTapAtRef.current, recognizerRef.current?.lastHeardAt ?? 0);
+      if (choosing || performance.now() - lastActive >= 60_000) {
+        finishUpRef.current = false;
+        triggerWrapUpRef.current();
+      }
+    }, 2000);
+    return () => { window.removeEventListener('pointerdown', onTap); clearInterval(id); };
+  }, [isParentScreenActive]);
+
   // Costume tray opened from the picture screen: pause; closing replays where we were.
   const openTray = () => {
     if (recognizerRef.current?.heardSpeech) triedRef.current = true;
     cancelRound();
     trayPausedRef.current = true;
     setShowCharacterCards(true);
+    // The child can tap OR say a costume once the rack is open.
+    startListeningForChoice();
   };
   const closeTray = () => {
     setShowCharacterCards(false);

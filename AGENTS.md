@@ -18,3 +18,4 @@
 - Browser recognition capture is owned by `RecognitionSession` for the whole visible play session; round changes only clear listeners, while parent screens, wrap-up, hidden tabs and mic loss pause capture, to avoid repeated iOS privacy banners.
 - Full-screen views use the shared dynamic-viewport fallback and safe-area spacing; scrolling belongs inside parent views rather than the document, so browser chrome never clips play controls.
 - The app's single descriptive `h1` and its parent-facing blurb live in `ParentSetup` (the first parent screen, and the only crawlable first view); step questions are `h2`s, and child-facing screens stay word-free, so the heading never moves there.
+- Each listener activation ignores recognition results that began before it (activation index), and the session time limit only sets a finish-up flag checked at the end of a costume, so continuous capture and time limits never cut play short or replay stale speech.

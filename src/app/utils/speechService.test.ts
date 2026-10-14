@@ -18,11 +18,17 @@ function createRecognizer() {
   vi.stubGlobal('window', { SpeechRecognition: BrowserRecognition });
   vi.stubGlobal('localStorage', { getItem: () => null });
   resetEchoGuard();
+  heard = [];
   return new ToddlerSpeechRecognizer();
 }
-function speech(text: string) {
-  return { resultIndex: 0, results: [Object.assign([{ transcript: text, confidence: 0.9 }], { isFinal: true })] };
+// Continuous session: each new utterance is appended after the earlier ones.
+let heard: unknown[] = [];
+function speech(text: string, isFinal = true) {
+  heard.push(Object.assign([{ transcript: text, confidence: 0.9 }], { isFinal }));
+  return { resultIndex: heard.length - 1, results: [...heard] };
 }
+/** The browser re-sends an earlier (still open) utterance. */
+function resend(index: number) { return { resultIndex: index, results: [...heard] }; }
 
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); vi.clearAllMocks(); });
 
@@ -66,5 +72,28 @@ describe('game listener routing', () => {
     expect(rec.unavailable).toBe(true);
     expect(unavailable).toHaveBeenCalledTimes(1);
     expect(BrowserRecognition.instance.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores speech that started before a new listener activated', async () => {
+    const rec = createRecognizer(); const choice = vi.fn();
+    rec.start(vi.fn());
+    await BrowserRecognition.instance.onresult?.(speech('fireman', false));
+    rec.start(choice);
+    await BrowserRecognition.instance.onresult?.(resend(0));
+    expect(choice).not.toHaveBeenCalled();
+    await BrowserRecognition.instance.onresult?.(speech('lion'));
+    expect(choice).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not re-pick the current costume by voice while the question is playing', async () => {
+    const { beginPrompt, endPrompt } = await import('./echoGuard');
+    const rec = createRecognizer(); const choice = vi.fn();
+    rec.start(choice, undefined, 'firefighter');
+    beginPrompt('What else would you like to be today', ['fireman'], performance.now());
+    await BrowserRecognition.instance.onresult?.(speech('fireman'));
+    expect(choice).not.toHaveBeenCalled();
+    endPrompt(performance.now() - 5000);
+    await BrowserRecognition.instance.onresult?.(speech('fireman'));
+    expect(choice).toHaveBeenCalledTimes(1);
   });
 });

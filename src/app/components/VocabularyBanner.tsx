@@ -58,8 +58,7 @@ export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
       animate={{ y: 0, opacity: 1, scale: 1 }}
       exit={{ y: 20, opacity: 0, scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-      className="w-full max-w-3xl mx-auto bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-xl border-3 p-2 sm:p-3 flex flex-col gap-2 select-none"
-      style={{ borderColor: character.primaryColor }}
+      className="w-full max-w-3xl mx-auto bg-transparent p-1 sm:p-2 flex flex-col gap-2 select-none"
     >
       {/* Tier 1: costume badge, replay speaker, mic status, back to costumes (icons only) */}
       <div className="w-full flex items-center justify-between gap-2 px-1">
@@ -164,7 +163,7 @@ export const VocabularyBanner: React.FC<VocabularyBannerProps> = ({
                       onActionClick(action);
                     }
                   }}
-                  className={`cursor-pointer w-full py-3 px-2 sm:py-4 sm:px-3 rounded-2xl border-b-4 flex items-center justify-center gap-1.5 sm:gap-2 border-2 transition-all duration-200 active:scale-95 shadow-xs font-black text-xs sm:text-sm text-center ${
+                  className={`cursor-pointer w-full py-3 px-2 sm:py-4 sm:px-3 rounded-2xl border-b-4 flex items-center justify-center gap-1.5 sm:gap-2 border-2 transition-all duration-200 active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.35)] font-black text-xs sm:text-sm text-center ${
                     isCelebratedThis
                       ? 'bg-amber-300 border-amber-500 text-amber-950 ring-3 ring-amber-400 scale-[1.02]'
                       : isRepeatingThis
