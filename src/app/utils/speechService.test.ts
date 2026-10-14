@@ -88,7 +88,7 @@ describe('game listener routing', () => {
   it('does not re-pick the current costume by voice while the question is playing', async () => {
     const { beginPrompt, endPrompt } = await import('./echoGuard');
     const rec = createRecognizer(); const choice = vi.fn();
-    rec.start(choice, undefined, 'fireman');
+    rec.start(choice, undefined, 'firefighter');
     beginPrompt('What else would you like to be today', ['fireman'], performance.now());
     await BrowserRecognition.instance.onresult?.(speech('fireman'));
     expect(choice).not.toHaveBeenCalled();
