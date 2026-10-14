@@ -761,6 +761,13 @@ export class ToddlerSpeechRecognizer {
   private onResultCallback: ((character: CharacterItem | null, rawTranscript: string) => void) | null = null;
   private onActionMatchCallback: ((quality: 'perfect' | 'needs-practice') => void) | null = null;
   private targetWord: string = '';
+  /** Results before this index belong to an earlier listener and are ignored. */
+  private activationIndex = 0;
+  private seenResults = 0;
+  /** Costume the child already wears: not picked by voice while the question plays. */
+  private blockedCharacterId: string | null = null;
+  /** performance.now() when child speech was last heard (any listener). */
+  public lastHeardAt = 0;
   private onSpeechDetectedCallback: (() => void) | null = null;
   /** True once the browser has permanently refused the mic (or has no recognizer). */
   public unavailable = false;
@@ -789,13 +796,19 @@ export class ToddlerSpeechRecognizer {
       const userLang = (typeof navigator !== 'undefined' && navigator.language) ? navigator.language : 'en-US';
       this.recognition.lang = userLang;
       this.session = new RecognitionSession(this.recognition);
-      this.recognition.onstart = () => this.session?.onStart();
+      this.recognition.onstart = () => {
+        this.activationIndex = 0;
+        this.seenResults = 0;
+        this.session?.onStart();
+      };
 
       this.recognition.onresult = async (event: any) => {
+        this.seenResults = Math.max(this.seenResults, event.results.length);
         if (!this.onActionMatchCallback && !this.onResultCallback) return;
         const version = this.listenerVersion;
         let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        // Skip speech that started before this listener was activated.
+        for (let i = Math.max(event.resultIndex, this.activationIndex); i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
         }
 
@@ -805,6 +818,7 @@ export class ToddlerSpeechRecognizer {
         const tokens = childTokens(transcript, now);
         if (tokens.length === 0) return;
         const childText = tokens.join(' ');
+        this.lastHeardAt = now;
 
         this.heardSpeech = true;
         if (this.onSpeechDetectedCallback) this.onSpeechDetectedCallback();
@@ -840,6 +854,7 @@ export class ToddlerSpeechRecognizer {
           const customWords = getCustomTrainedWords();
           // Fast local fuzzy match with trained custom words prioritized
           const localMatch = findCharacter(childText, customWords);
+          if (localMatch && localMatch.id === this.blockedCharacterId && prompting) return;
           if (localMatch) {
             this.onResultCallback(localMatch, childText);
             return;
@@ -853,6 +868,7 @@ export class ToddlerSpeechRecognizer {
             if (version !== this.listenerVersion) return;
             if (data.characterId) {
               const char = CHARACTERS.find(c => c.id === data.characterId);
+              if (char && char.id === this.blockedCharacterId && isPromptLive(performance.now())) return;
               if (char && this.onResultCallback) {
                 this.onResultCallback(char, childText);
                 return;
@@ -889,9 +905,11 @@ export class ToddlerSpeechRecognizer {
 
   public start(
     onResult: (character: CharacterItem | null, rawTranscript: string) => void,
-    onSpeechDetected?: () => void
+    onSpeechDetected?: () => void,
+    blockedCharacterId: string | null = null
   ) {
     this.clearListener();
+    this.blockedCharacterId = blockedCharacterId;
     this.onResultCallback = onResult;
     this.onActionMatchCallback = null;
     this.targetWord = '';
@@ -913,6 +931,8 @@ export class ToddlerSpeechRecognizer {
 
   public clearListener() {
     this.listenerVersion += 1;
+    this.activationIndex = this.seenResults;
+    this.blockedCharacterId = null;
     this.onResultCallback = null;
     this.onActionMatchCallback = null;
     this.targetWord = '';
